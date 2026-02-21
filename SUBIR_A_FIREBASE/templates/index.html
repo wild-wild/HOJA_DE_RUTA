@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Subir Estudiantes a Firebase</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --surface: #111827;
+      --surface2: #1a2336;
+      --border: #1e2d47;
+      --accent: #f97316;
+      --accent2: #fb923c;
+      --blue: #3b82f6;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #eab308;
+      --text: #f1f5f9;
+      --text-muted: #64748b;
+      --text-soft: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* HEADER */
+    header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+
+    header h1 {
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    header p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .firebase-badge {
+      margin-left: auto;
+      background: rgba(249, 115, 22, 0.15);
+      border: 1px solid rgba(249, 115, 22, 0.3);
+      color: var(--accent2);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .firebase-badge::before {
+      content: '🔥';
+    }
+
+    /* MAIN */
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    /* STATS CARDS */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent);
+    }
+
+    .stat-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .stat-icon.orange {
+      background: rgba(249, 115, 22, 0.15);
+    }
+
+    .stat-icon.blue {
+      background: rgba(59, 130, 246, 0.15);
+    }
+
+    .stat-icon.green {
+      background: rgba(34, 197, 94, 0.15);
+    }
+
+    .stat-icon.yellow {
+      background: rgba(234, 179, 8, 0.15);
+    }
+
+    .stat-val {
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* ACTION AREA */
+    .action-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .action-bar p {
+      color: var(--text-soft);
+      font-size: 14px;
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .btn {
+      padding: 11px 24px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(249, 115, 22, 0.4);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-soft);
+    }
+
+    .btn-outline:hover:not(:disabled) {
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+
+    /* PROGRESS */
+    .progress-area {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      display: none;
+    }
+
+    .progress-area.visible {
+      display: block;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .progress-title {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .progress-count {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .progress-bar-bg {
+      background: var(--border);
+      border-radius: 99px;
+      height: 8px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 99px;
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+
+    .progress-log {
+      margin-top: 14px;
+      max-height: 150px;
+      overflow-y: auto;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .log-entry {
+      padding: 3px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .log-entry.ok {
+      color: var(--green);
+    }
+
+    .log-entry.err {
+      color: var(--red);
+    }
+
+    .log-entry.info {
+      color: var(--blue);
+    }
+
+    /* SUCCESS / ERROR BANNERS */
+    .banner {
+      padding: 14px 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      font-weight: 500;
+      display: none;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .banner.visible {
+      display: flex;
+    }
+
+    .banner.success {
+      background: rgba(34, 197, 94, 0.12);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: var(--green);
+    }
+
+    .banner.error {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: var(--red);
+    }
+
+    /* SEARCH */
+    .search-wrap {
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .search-wrap input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 11px 16px 11px 40px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-wrap input:focus {
+      border-color: var(--accent);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 16px;
+    }
+
+    /* TABLE */
+    .table-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      background: var(--surface2);
+    }
+
+    th {
+      padding: 13px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: left;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    td {
+      padding: 12px 16px;
+      font-size: 13px;
+      border-top: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .badge-aprobadas {
+      background: rgba(34, 197, 94, 0.12);
+      color: var(--green);
+      border: 1px solid rgba(34, 197, 94, 0.25);
+      padding: 3px 9px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-pendientes {
+      background: rgba(239, 68, 68, 0.1);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      padding: 3px 9px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .avance-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .avance-bg {
+      flex: 1;
+      height: 6px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .avance-fill {
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, var(--blue), var(--green));
+    }
+
+    .avance-pct {
+      font-size: 12px;
+      color: var(--text-muted);
+      min-width: 36px;
+      text-align: right;
+    }
+
+    .estado-firebase {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      padding: 3px 10px;
+      border-radius: 99px;
+    }
+
+    .estado-firebase.pendiente {
+      background: rgba(100, 116, 139, 0.15);
+      color: var(--text-muted);
+    }
+
+    .estado-firebase.subiendo {
+      background: rgba(234, 179, 8, 0.12);
+      color: var(--yellow);
+    }
+
+    .estado-firebase.ok {
+      background: rgba(34, 197, 94, 0.12);
+      color: var(--green);
+    }
+
+    .estado-firebase.error {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--red);
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      display: inline-block;
+    }
+
+    .dot.pulse {
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: 0.3
+      }
+    }
+
+    /* Empty / loading */
+    .empty-state {
+      text-align: center;
+      padding: 48px;
+      color: var(--text-muted);
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 12px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      header {
+        padding: 16px;
+        flex-wrap: wrap;
+      }
+
+      main {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="header-icon">🎓</div>
+    <div>
+      <h1>Estudiantes → Firebase</h1>
+      <p>Carga masiva desde Excel con pandas</p>
+    </div>
+    <div class="firebase-badge">psiconet-hoja-de-ruta</div>
+  </header>
+
+  <main>
+
+    <!-- STATS -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card">
+        <div class="stat-icon orange">👥</div>
+        <div>
+          <div class="stat-val" id="statTotal">—</div>
+          <div class="stat-label">Estudiantes</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon blue">📚</div>
+        <div>
+          <div class="stat-val" id="statMaterias">—</div>
+          <div class="stat-label">Materias</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon green">✅</div>
+        <div>
+          <div class="stat-val" id="statSubidos">0</div>
+          <div class="stat-label">Subidos a Firebase</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon yellow">⚡</div>
+        <div>
+          <div class="stat-val" id="statPendFire">—</div>
+          <div class="stat-label">Pendientes subida</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTION BAR -->
+    <div class="action-bar">
+      <p id="actionMsg">Carga los datos del Excel y luego sube todos los estudiantes a Firestore de una sola vez.</p>
+      <button class="btn btn-outline" id="btnCargar" onclick="cargarDatos()">
+        📂 Cargar Excel
+      </button>
+      <button class="btn btn-primary" id="btnSubir" onclick="subirTodos()" disabled>
+        🔥 Subir a Firebase
+      </button>
+    </div>
+
+    <!-- BANNERS -->
+    <div class="banner success" id="bannerOk">
+      <span>✅</span> <span id="bannerOkMsg"></span>
+    </div>
+    <div class="banner error" id="bannerErr">
+      <span>❌</span> <span id="bannerErrMsg"></span>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="progress-area" id="progressArea">
+      <div class="progress-header">
+        <span class="progress-title">⬆️ Subiendo a Firestore...</span>
+        <span class="progress-count" id="progressCount">0 / 0</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
+      <div class="progress-log" id="progressLog"></div>
+    </div>
+
+    <!-- SEARCH -->
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Buscar por nombre o registro..." oninput="filtrarTabla()" />
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Registro</th>
+            <th>Nombre</th>
+            <th>Ingreso</th>
+            <th>Niv.</th>
+            <th>Aprobadas</th>
+            <th>Pendientes</th>
+            <th>Avance</th>
+            <th>Firebase</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr>
+            <td colspan="8">
+              <div class="empty-state">
+                <p>Haz clic en <strong>Cargar Excel</strong> para visualizar los datos</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDgTL3KlSvtvXeaLMRIgC4IWIbpM5FxNeE",
+      authDomain: "psiconet-hoja-de-ruta.firebaseapp.com",
+      projectId: "psiconet-hoja-de-ruta",
+      storageBucket: "psiconet-hoja-de-ruta.firebasestorage.app",
+      messagingSenderId: "486390420148",
+      appId: "1:486390420148:web:1e64bd9fcd9b8f043cfde1"
+    };
+
+    const fbApp = initializeApp(firebaseConfig);
+    const db = getFirestore(fbApp);
+
+    // Exposición global para el resto del script
+    window._db = db;
+    window._collection = collection;
+    window._doc = doc;
+    window._setDoc = setDoc;
+    window._firebaseReady = true;
+    console.log("✅ Firebase inicializado");
+  </script>
+
+  <script>
+    let todosLosEstudiantes = [];
+    let estadoFirebase = {}; // registro -> 'pendiente' | 'ok' | 'error'
+
+    /* ---- CARGAR DATOS DESDE FLASK ---- */
+    async function cargarDatos() {
+      const btn = document.getElementById('btnCargar');
+      btn.disabled = true;
+      btn.textContent = '⏳ Cargando...';
+      ocultarBanners();
+
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="spinner"></div><p>Leyendo Excel con pandas...</p></div></td></tr>`;
+
+      try {
+        const resp = await fetch('/api/estudiantes');
+        const data = await resp.json();
+
+        if (!data.success) throw new Error(data.error);
+
+        todosLosEstudiantes = data.estudiantes;
+        document.getElementById('statTotal').textContent = data.total;
+        document.getElementById('statMaterias').textContent = data.columnas_materias.length;
+        document.getElementById('statPendFire').textContent = data.total;
+        document.getElementById('actionMsg').textContent =
+          `${data.total} estudiantes cargados. Haz clic en "Subir a Firebase" para guardarlos en Firestore.`;
+
+        // Inicializar estados (Registro puede venir como 'Registro' del Excel)
+        estadoFirebase = {};
+        todosLosEstudiantes.forEach(e => {
+          const reg = String(e.Registro ?? e.registro);
+          estadoFirebase[reg] = 'pendiente';
+        });
+
+        renderTabla(todosLosEstudiantes);
+        document.getElementById('btnSubir').disabled = false;
+        document.getElementById('btnCargar').textContent = '🔄 Recargar Excel';
+
+      } catch (err) {
+        mostrarError('Error al cargar el Excel: ' + err.message);
+        tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><p>❌ ${err.message}</p></div></td></tr>`;
+      }
+
+      btn.disabled = false;
+    }
+
+    /* ---- SUBIR TODOS A FIREBASE ---- */
+    async function subirTodos() {
+      if (todosLosEstudiantes.length === 0) return mostrarError('Primero carga los datos del Excel.');
+
+      // Espera a que Firebase esté listo
+      let intentos = 0;
+      while (!window._firebaseReady && intentos < 30) {
+        await sleep(200); intentos++;
+      }
+      if (!window._firebaseReady) return mostrarError('Firebase no está listo. Recarga la página.');
+
+      ocultarBanners();
+      document.getElementById('btnSubir').disabled = true;
+      document.getElementById('btnCargar').disabled = true;
+
+      const progressArea = document.getElementById('progressArea');
+      const progressFill = document.getElementById('progressFill');
+      const progressCount = document.getElementById('progressCount');
+      const progressLog = document.getElementById('progressLog');
+      progressArea.classList.add('visible');
+      progressLog.innerHTML = '';
+
+      let ok = 0, errores = 0;
+      const total = todosLosEstudiantes.length;
+
+      for (let i = 0; i < total; i++) {
+        const est = todosLosEstudiantes[i];
+        // Soporta tanto 'Registro' (mayúscula, del Excel) como 'registro'
+        const id = String(est.Registro ?? est.registro);
+        estadoFirebase[id] = 'subiendo';
+        actualizarFilaEstado(id, 'subiendo');
+
+        try {
+          // Guardar TODOS los campos del Excel tal cual + timestamp
+          const docRef = window._doc(window._db, 'estudiantes', id);
+          const docData = { ...est, timestamp_subida: new Date().toISOString() };
+          // Eliminar campos internos de UI (prefijo _) del documento guardado
+          // Mantenemos _total_aprobadas, _total_pendientes, _porcentaje_avance como resumen útil
+          await window._setDoc(docRef, docData);
+
+          estadoFirebase[id] = 'ok';
+          actualizarFilaEstado(id, 'ok');
+          ok++;
+          agregarLog(`✅ ${est.Nombre ?? est.nombre} (${id})`, 'ok');
+
+        } catch (e) {
+          estadoFirebase[id] = 'error';
+          actualizarFilaEstado(id, 'error');
+          errores++;
+          agregarLog(`❌ Error en ${id}: ${e.message}`, 'err');
+        }
+
+        // Actualizar barra
+        const pct = Math.round(((i + 1) / total) * 100);
+        progressFill.style.width = pct + '%';
+        progressCount.textContent = `${i + 1} / ${total}`;
+        document.getElementById('statSubidos').textContent = ok;
+        document.getElementById('statPendFire').textContent = total - ok - errores;
+
+        // Pequeña pausa para no saturar Firestore
+        await sleep(80);
+      }
+
+      document.getElementById('btnCargar').disabled = false;
+      document.getElementById('btnSubir').disabled = false;
+
+      if (errores === 0) {
+        mostrarExito(`🎉 ¡${ok} estudiantes subidos correctamente a Firebase!`);
+      } else {
+        mostrarError(`Subida completada: ${ok} exitosos, ${errores} con error. Revisa el log.`);
+      }
+    }
+
+    /* ---- RENDER TABLA ---- */
+    function renderTabla(lista) {
+      const tbody = document.getElementById('tableBody');
+      if (lista.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><p>No hay resultados</p></div></td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = lista.map(e => {
+        // Soporta columnas con mayúscula (del Excel) o minúscula
+        const reg = e.Registro ?? e.registro;
+        const nombre = e.Nombre ?? e.nombre ?? '—';
+        const ingreso = e.Fec_ingreso ?? e.fec_ingreso ?? '—';
+        const niv = e.Niv_min ?? e.niv_min ?? '—';
+        const aprobadas = e._total_aprobadas ?? 0;
+        const pendientes = e._total_pendientes ?? 0;
+        const avance = e._porcentaje_avance ?? 0;
+        const estado = estadoFirebase[String(reg)] || 'pendiente';
+        return `<tr id="row-${reg}">
+        <td><code style="color:var(--accent2)">${reg}</code></td>
+        <td style="font-weight:500">${nombre}</td>
+        <td style="color:var(--text-muted)">${ingreso}</td>
+        <td>${niv}</td>
+        <td><span class="badge-aprobadas">✓ ${aprobadas}</span></td>
+        <td><span class="badge-pendientes">✗ ${pendientes}</span></td>
+        <td>
+          <div class="avance-bar">
+            <div class="avance-bg">
+              <div class="avance-fill" style="width:${avance}%"></div>
+            </div>
+            <span class="avance-pct">${avance}%</span>
+          </div>
+        </td>
+        <td id="estado-${reg}">${estadoBadge(estado)}</td>
+      </tr>`;
+      }).join('');
+    }
+
+    function estadoBadge(estado) {
+      const cfg = {
+        pendiente: { label: 'Pendiente', cls: 'pendiente', dot: '' },
+        subiendo: { label: 'Subiendo…', cls: 'subiendo', dot: 'pulse' },
+        ok: { label: 'Guardado', cls: 'ok', dot: '' },
+        error: { label: 'Error', cls: 'error', dot: '' },
+      };
+      const c = cfg[estado] || cfg.pendiente;
+      return `<span class="estado-firebase ${c.cls}"><span class="dot ${c.dot}"></span>${c.label}</span>`;
+    }
+
+    function actualizarFilaEstado(registro, estado) {
+      const el = document.getElementById(`estado-${registro}`);
+      if (el) el.innerHTML = estadoBadge(estado);
+    }
+
+    /* ---- FILTRO BÚSQUEDA ---- */
+    function filtrarTabla() {
+      const q = document.getElementById('searchInput').value.toLowerCase().trim();
+      const filtrado = todosLosEstudiantes.filter(e => {
+        const nombre = String(e.Nombre ?? e.nombre ?? '');
+        const reg = String(e.Registro ?? e.registro ?? '');
+        return nombre.toLowerCase().includes(q) || reg.includes(q);
+      });
+      renderTabla(filtrado);
+    }
+
+    /* ---- UTILS ---- */
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    function mostrarExito(msg) {
+      document.getElementById('bannerOkMsg').textContent = msg;
+      document.getElementById('bannerOk').classList.add('visible');
+    }
+    function mostrarError(msg) {
+      document.getElementById('bannerErrMsg').textContent = msg;
+      document.getElementById('bannerErr').classList.add('visible');
+    }
+    function ocultarBanners() {
+      document.getElementById('bannerOk').classList.remove('visible');
+      document.getElementById('bannerErr').classList.remove('visible');
+    }
+    function agregarLog(msg, tipo) {
+      const log = document.getElementById('progressLog');
+      const div = document.createElement('div');
+      div.className = 'log-entry ' + (tipo || '');
+      div.textContent = msg;
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // Exponer funciones al HTML
+    window.cargarDatos = cargarDatos;
+    window.subirTodos = subirTodos;
+    window.filtrarTabla = filtrarTabla;
+  </script>
+
+</body>
+
+</html>
