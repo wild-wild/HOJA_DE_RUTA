@@ -1170,6 +1170,8 @@ async function cargarEstudiantes() {
           _total_pendientes: row.total_pendientes,
           _total_materias: row.total_materias,
           _porcentaje_avance: row.porcentaje_avance,
+          _gestion1_2026: row.gestion1_2026 || [],
+          _gestion2_2026: row.gestion2_2026 || [],
         };
         // Expandir materias JSONB a nivel raíz: est["ANT100"] = 75
         if (row.materias && typeof row.materias === "object") {
@@ -1970,8 +1972,18 @@ function inicializarSeleccion(est, pool) {
   if (sugEstActual === id) return;
   sugEstActual = id;
   sugSeleccion = {};
-  pool.slice(0, 7).forEach(m  => { sugSeleccion[m.sigla] = 'g1'; });
-  pool.slice(7, 14).forEach(m => { sugSeleccion[m.sigla] = 'g2'; });
+
+  // Si ya hay datos guardados en Supabase, precargar desde ahí
+  const g1Saved = est._gestion1_2026 || [];
+  const g2Saved = est._gestion2_2026 || [];
+  if (g1Saved.length > 0 || g2Saved.length > 0) {
+    g1Saved.forEach(sigla => { sugSeleccion[sigla] = 'g1'; });
+    g2Saved.forEach(sigla => { sugSeleccion[sigla] = 'g2'; });
+  } else {
+    // Auto-sugerencia por defecto
+    pool.slice(0, 7).forEach(m  => { sugSeleccion[m.sigla] = 'g1'; });
+    pool.slice(7, 14).forEach(m => { sugSeleccion[m.sigla] = 'g2'; });
+  }
 }
 
 /* Clic en card pendiente: cicla none → g1 → g2 → none */
@@ -2022,12 +2034,195 @@ window.abrirModalMalla = function() {
   document.body.style.overflow = 'hidden';
 };
 
-/* Guardar y cerrar */
-window.guardarModalMalla = function() {
-  const overlay = document.getElementById('modalMallaOverlay');
-  if (overlay) overlay.style.display = 'none';
-  document.body.style.overflow = '';
-  renderSugerencias(estudianteActual);
+/* Guardar selección en Supabase y cerrar */
+window.guardarModalMalla = async function() {
+  const est = estudianteActual;
+  if (!est) return;
+
+  // Construir arrays de siglas
+  const g1 = Object.entries(sugSeleccion).filter(([,v]) => v === 'g1').map(([s]) => s);
+  const g2 = Object.entries(sugSeleccion).filter(([,v]) => v === 'g2').map(([s]) => s);
+
+  // Feedback: deshabilitar botón
+  const btn = document.querySelector('.mm-btn-save');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+  }
+
+  try {
+    const { error } = await supabase
+      .from('estudiantes')
+      .update({
+        gestion1_2026: g1,
+        gestion2_2026: g2
+      })
+      .eq('registro', est.Registro);
+
+    if (error) throw error;
+
+    // Actualizar datos locales para que al recargar se precarguen
+    est._gestion1_2026 = g1;
+    est._gestion2_2026 = g2;
+
+    // Cerrar modal
+    const overlay = document.getElementById('modalMallaOverlay');
+    if (overlay) overlay.style.display = 'none';
+    document.body.style.overflow = '';
+    renderSugerencias(est);
+
+    // Toast de éxito
+    mostrarToast('Selección guardada correctamente', 'ok');
+  } catch (err) {
+    console.error('Error al guardar selección:', err);
+    mostrarToast('Error al guardar: ' + (err.message || err), 'error');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> Guardar y cerrar';
+    }
+  }
+};
+
+/* Toast helper */
+function mostrarToast(msg, tipo) {
+  const t = document.createElement('div');
+  t.className = 'toast-msg toast-' + tipo;
+  t.innerHTML = `<i class="fa-solid ${tipo === 'ok' ? 'fa-circle-check' : 'fa-circle-exclamation'}"></i> ${msg}`;
+  document.body.appendChild(t);
+  setTimeout(() => { t.classList.add('toast-show'); }, 10);
+  setTimeout(() => { t.classList.remove('toast-show'); setTimeout(() => t.remove(), 300); }, 3000);
+}
+
+/* ── Imprimir Hoja de Ruta en PDF ──────────────────────────── */
+window.imprimirHojaRuta = function() {
+  const est = estudianteActual;
+  if (!est) return;
+
+  const { plan, totalAprobadas, maxSemNum, pool } = getSugerencias(est);
+  const semActualStr = maxSemNum > 0 ? SEM_NAMES_SUG[maxSemNum] + ' Semestre' : '—';
+
+  // Construir malla antigua para impresión
+  const byKey = {};
+  CONVALIDACIONES.forEach(r => {
+    const sigla = r[0], nombre = r[1], sem = r[2], tipo = r[6], orden = r[7];
+    if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla)) {
+      const nota = est[sigla];
+      const n = nota != null && nota !== '' && !isNaN(Number(nota)) ? Number(nota) : null;
+      if (n === null || n < 51) return;
+    }
+    if (!byKey[sem]) byKey[sem] = [];
+    byKey[sem].push({ sigla, nombre, tipo, orden });
+  });
+  Object.values(byKey).forEach(arr => arr.sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999)));
+
+  // Filas de malla
+  let mallaCols = '';
+  SECS_SEMESTRES.forEach(sec => {
+    const mats = byKey[sec.key] || [];
+    let matRows = '';
+    mats.forEach(m => {
+      const nota = est[m.sigla];
+      const n = nota != null && nota !== '' && !isNaN(Number(nota)) ? Number(nota) : null;
+      const aprobada = n !== null && n >= 51;
+      const reprobada = n !== null && n < 51;
+      let bg = '#f9fafb', color = '#6b7280', notaStr = '—';
+      if (aprobada) { bg = '#f0fdf4'; color = '#16a34a'; notaStr = '✓ ' + n; }
+      else if (reprobada) { bg = '#fef2f2'; color = '#dc2626'; notaStr = '✗ ' + n; }
+      else if (m.tipo === 'ELIMINADA') { bg = '#f3f4f6'; color = '#9ca3af'; notaStr = 'ELIM'; }
+      matRows += `<div style="padding:2px 4px;border:1px solid #e5e7eb;border-radius:3px;font-size:7px;background:${bg};margin-bottom:2px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <b>${m.sigla}</b>
+          <span style="color:${color};font-weight:700;font-size:6.5px">${notaStr}</span>
+        </div>
+        <div style="font-size:6px;color:#6b7280;line-height:1.1">${m.nombre}</div>
+      </div>`;
+    });
+    mallaCols += `<td style="vertical-align:top;width:10%;padding:2px">
+      <div style="background:${sec.color}18;border:1px solid ${sec.color}50;color:${sec.color};border-radius:3px;padding:2px 4px;font-size:7px;font-weight:700;text-align:center;margin-bottom:3px">
+        ${sec.label} <span style="opacity:0.6;font-size:6px">(${mats.length})</span>
+      </div>
+      ${matRows}
+    </td>`;
+  });
+
+  // Tablas de selección G1/G2
+  const selG1 = Object.entries(sugSeleccion).filter(([,v]) => v === 'g1').map(([s]) => s);
+  const selG2 = Object.entries(sugSeleccion).filter(([,v]) => v === 'g2').map(([s]) => s);
+  const siglaToNombre = {};
+  sugPoolCache.forEach(m => { siglaToNombre[m.sigla] = m.nombre; });
+
+  function tablaImpresion(titulo, lista, colorBg) {
+    let filas = lista.map((sigla, i) => {
+      const nombre = siglaToNombre[sigla] || sigla;
+      return `<tr><td style="text-align:center;width:25px">${i+1}</td><td style="font-weight:700;width:70px">${sigla}</td><td>${nombre}</td></tr>`;
+    }).join('');
+    if (!lista.length) filas = '<tr><td colspan="3" style="text-align:center;color:#9ca3af;font-style:italic">Sin materias asignadas</td></tr>';
+    return `<div style="flex:1;min-width:250px">
+      <div style="background:${colorBg};color:#fff;padding:4px 8px;border-radius:4px 4px 0 0;font-weight:700;font-size:9px">${titulo} (${lista.length}/7)</div>
+      <table style="width:100%;border-collapse:collapse;font-size:8px">
+        <thead><tr style="background:#f1f5f9"><th style="padding:2px 4px;text-align:left">#</th><th style="padding:2px 4px;text-align:left">Sigla</th><th style="padding:2px 4px;text-align:left">Materia</th></tr></thead>
+        <tbody>${filas}</tbody>
+      </table>
+    </div>`;
+  }
+
+  const fechaHoy = new Date().toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Hoja de Ruta - ${est.Nombre}</title>
+<style>
+  @page { size: landscape; margin: 8mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 9px; color: #1f2937; }
+  .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; margin-bottom: 8px; }
+  .header h1 { font-size: 13px; color: #1e3a8a; }
+  .header .info { font-size: 8px; text-align: right; color: #6b7280; }
+  .stats { display: flex; gap: 12px; margin-bottom: 8px; font-size: 8px; }
+  .stat { background: #f1f5f9; padding: 3px 8px; border-radius: 4px; }
+  .stat b { color: #1e3a8a; }
+  .malla-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+  .section-title { font-size: 10px; font-weight: 700; color: #1e3a8a; margin: 8px 0 4px; border-bottom: 1px solid #e5e7eb; padding-bottom: 2px; }
+  .sel-wrap { display: flex; gap: 12px; }
+  table { border-collapse: collapse; }
+  table td, table th { border-bottom: 1px solid #e5e7eb; padding: 2px 4px; }
+  .footer { margin-top: 10px; font-size: 7px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 4px; }
+</style>
+</head><body>
+  <div class="header">
+    <div>
+      <h1>📋 HOJA DE RUTA ACADÉMICA</h1>
+      <div style="font-size:8px;color:#6b7280">Carrera de Psicología — Plan ${plan}</div>
+    </div>
+    <div class="info">
+      <div><b>${est.Nombre}</b></div>
+      <div>Registro: ${est.Registro}</div>
+      <div>Fecha: ${fechaHoy}</div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <span class="stat">📚 Semestre cursado: <b>${semActualStr}</b></span>
+    <span class="stat">✅ Aprobadas: <b>${totalAprobadas}</b></span>
+    <span class="stat">⏳ Pendientes: <b>${pool.length}</b></span>
+    <span class="stat">📊 Avance: <b>${est._porcentaje_avance ?? '—'}%</b></span>
+  </div>
+
+  <div class="section-title">AVANCE EN MALLA ANTIGUA (148-1)</div>
+  <table class="malla-table"><tr>${mallaCols}</tr></table>
+
+  <div class="section-title">INSCRIPCIÓN SUGERIDA — GESTIÓN 2026</div>
+  <div class="sel-wrap">
+    ${tablaImpresion('Gestión 1/2026', selG1, '#1e3a8a')}
+    ${tablaImpresion('Gestión 2/2026', selG2, '#6d28d9')}
+  </div>
+
+  <div class="footer">Generado desde Hoja de Ruta Académica — ${fechaHoy}</div>
+</body></html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  win.onload = () => { win.print(); };
 };
 
 window.cerrarModalMalla = function() {
@@ -2276,6 +2471,9 @@ function actualizarModalMalla() {
         ${tablaGestion(selG1, 'g1', 'Gestión 1/2026', cntG1)}
         ${tablaGestion(selG2, 'g2', 'Gestión 2/2026', cntG2)}
         <div class="mm-panel-actions">
+          <button class="mm-btn-print" onclick="imprimirHojaRuta()">
+            <i class="fa-solid fa-print"></i> Imprimir PDF
+          </button>
           <button class="mm-btn-save" onclick="guardarModalMalla()">
             <i class="fa-solid fa-check"></i> Guardar y cerrar
           </button>

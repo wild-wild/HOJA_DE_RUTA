@@ -1686,8 +1686,24 @@ body {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  min-width: 140px;
+  gap: 0.5rem;
+  min-width: 280px;
 }
+.mm-btn-print {
+  padding: 0.45rem 1rem;
+  border: none;
+  background: #1e3a8a;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: background 0.15s;
+}
+.mm-btn-print:hover { background: #1e40af; }
 .mm-btn-save {
   padding: 0.45rem 1rem;
   border: none;
@@ -1710,3 +1726,26 @@ body {
   .mm-sem-col { min-width: 100%; max-width: 100%; }
   .mm-bottom-panel { flex-direction: column; }
 }
+
+/* ── Toast de feedback ─────────────────────────────────────── */
+.toast-msg {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 99999;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.3s ease;
+}
+.toast-show { transform: translateY(0); opacity: 1; }
+.toast-ok { background: #16a34a; }
+.toast-error { background: #dc2626; }
