@@ -2125,16 +2125,31 @@ window.imprimirHojaRuta = function() {
       const n = nota != null && nota !== '' && !isNaN(Number(nota)) ? Number(nota) : null;
       const aprobada = n !== null && n >= 51;
       const reprobada = n !== null && n < 51;
-      let bg = '#f9fafb', color = '#6b7280', notaStr = '—';
-      if (aprobada) { bg = '#f0fdf4'; color = '#16a34a'; notaStr = '✓ ' + n; }
-      else if (reprobada) { bg = '#fef2f2'; color = '#dc2626'; notaStr = '✗ ' + n; }
-      else if (m.tipo === 'ELIMINADA') { bg = '#f3f4f6'; color = '#9ca3af'; notaStr = 'ELIM'; }
-      matRows += `<div style="padding:2px 4px;border:1px solid #e5e7eb;border-radius:3px;font-size:7px;background:${bg};margin-bottom:2px">
+      const sel = sugSeleccion[m.sigla] || null;
+
+      let bg, borderCol, color, notaStr, badge = '';
+      if (aprobada) {
+        bg = '#dcfce7'; borderCol = '#16a34a'; color = '#15803d'; notaStr = '✓ ' + n;
+      } else if (reprobada) {
+        bg = '#fee2e2'; borderCol = '#dc2626'; color = '#dc2626'; notaStr = '✗ ' + n;
+      } else if (sel === 'g1') {
+        bg = '#dbeafe'; borderCol = '#1e3a8a'; color = '#1e3a8a'; notaStr = '';
+        badge = '<span style="background:#1e3a8a;color:#fff;font-size:5.5px;padding:0 3px;border-radius:2px;font-weight:800;margin-left:2px">G1</span>';
+      } else if (sel === 'g2') {
+        bg = '#ede9fe'; borderCol = '#6d28d9'; color = '#6d28d9'; notaStr = '';
+        badge = '<span style="background:#6d28d9;color:#fff;font-size:5.5px;padding:0 3px;border-radius:2px;font-weight:800;margin-left:2px">G2</span>';
+      } else if (m.tipo === 'ELIMINADA') {
+        bg = '#f3f4f6'; borderCol = '#d1d5db'; color = '#9ca3af'; notaStr = 'ELIM';
+      } else {
+        bg = '#fef9c3'; borderCol = '#f59e0b'; color = '#92400e'; notaStr = 'PEND';
+      }
+
+      matRows += `<div style="padding:2px 4px;border:2px solid ${borderCol};border-radius:3px;font-size:7px;background:${bg};margin-bottom:2px">
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <b>${m.sigla}</b>
+          <b>${m.sigla}</b>${badge}
           <span style="color:${color};font-weight:700;font-size:6.5px">${notaStr}</span>
         </div>
-        <div style="font-size:6px;color:#6b7280;line-height:1.1">${m.nombre}</div>
+        <div style="font-size:6px;color:#4b5563;line-height:1.1">${m.nombre}</div>
       </div>`;
     });
     mallaCols += `<td style="vertical-align:top;width:10%;padding:2px">
@@ -2172,14 +2187,17 @@ window.imprimirHojaRuta = function() {
 <html><head><meta charset="utf-8"><title>Hoja de Ruta - ${est.Nombre}</title>
 <style>
   @page { size: landscape; margin: 8mm; }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
   body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 9px; color: #1f2937; }
-  .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; margin-bottom: 8px; }
+  .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; margin-bottom: 6px; }
   .header h1 { font-size: 13px; color: #1e3a8a; }
   .header .info { font-size: 8px; text-align: right; color: #6b7280; }
-  .stats { display: flex; gap: 12px; margin-bottom: 8px; font-size: 8px; }
+  .stats { display: flex; gap: 12px; margin-bottom: 4px; font-size: 8px; }
   .stat { background: #f1f5f9; padding: 3px 8px; border-radius: 4px; }
   .stat b { color: #1e3a8a; }
+  .legend { display: flex; gap: 10px; margin-bottom: 6px; font-size: 7px; color: #6b7280; flex-wrap: wrap; }
+  .leg-item { display: inline-flex; align-items: center; gap: 3px; }
+  .leg-dot { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
   .malla-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
   .section-title { font-size: 10px; font-weight: 700; color: #1e3a8a; margin: 8px 0 4px; border-bottom: 1px solid #e5e7eb; padding-bottom: 2px; }
   .sel-wrap { display: flex; gap: 12px; }
@@ -2205,6 +2223,15 @@ window.imprimirHojaRuta = function() {
     <span class="stat">✅ Aprobadas: <b>${totalAprobadas}</b></span>
     <span class="stat">⏳ Pendientes: <b>${pool.length}</b></span>
     <span class="stat">📊 Avance: <b>${est._porcentaje_avance ?? '—'}%</b></span>
+  </div>
+
+  <div class="legend">
+    <span class="leg-item"><span class="leg-dot" style="background:#dcfce7;border:1px solid #16a34a"></span> Aprobada</span>
+    <span class="leg-item"><span class="leg-dot" style="background:#fee2e2;border:1px solid #dc2626"></span> Reprobada</span>
+    <span class="leg-item"><span class="leg-dot" style="background:#fef9c3;border:1px solid #f59e0b"></span> Pendiente</span>
+    <span class="leg-item"><span class="leg-dot" style="background:#dbeafe;border:1px solid #1e3a8a"></span> G1/2026</span>
+    <span class="leg-item"><span class="leg-dot" style="background:#ede9fe;border:1px solid #6d28d9"></span> G2/2026</span>
+    <span class="leg-item"><span class="leg-dot" style="background:#f3f4f6;border:1px solid #d1d5db"></span> Eliminada</span>
   </div>
 
   <div class="section-title">AVANCE EN MALLA ANTIGUA (148-1)</div>
