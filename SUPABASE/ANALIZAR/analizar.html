@@ -6,10 +6,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hoja de Ruta – Análisis de Estudiantes</title>
     <meta name="description" content="Sistema de análisis de avance académico con malla antigua y nueva del Plan 148" />
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+    <!-- Estilos personalizados (mallas, tarjetas, etc.) -->
     <link rel="stylesheet" href="estilos.css" />
 </head>
 
@@ -19,15 +28,19 @@
     <header class="header">
         <div class="header-inner">
             <div class="header-brand">
-                <div class="brand-icon">🎓</div>
+                <div class="brand-icon">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
                 <div>
                     <h1 class="brand-title">Hoja de Ruta Académica</h1>
-                    <p class="brand-sub">Plan 148 · Carrera de Psicología</p>
+                    <p class="brand-sub">Plan 148 &middot; Carrera de Psicología</p>
                 </div>
             </div>
             <div class="header-stats" id="headerStats">
-                <div class="stat-chip" id="statTotal"><span class="stat-num">–</span><span
-                        class="stat-label">estudiantes</span></div>
+                <div class="stat-chip" id="statTotal">
+                    <span class="stat-num">–</span>
+                    <span class="stat-label">estudiantes</span>
+                </div>
             </div>
         </div>
     </header>
@@ -38,8 +51,11 @@
         <!-- ===== PANEL IZQUIERDO: lista ===== -->
         <aside class="sidebar">
             <div class="search-wrap">
-                <input type="text" id="searchInput" class="search-input" placeholder="🔍  Buscar por nombre o registro…"
-                    autocomplete="off" />
+                <div class="search-input-wrap">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" id="searchInput" class="search-input" placeholder="Buscar por nombre o registro…"
+                        autocomplete="off" />
+                </div>
                 <div id="searchCount" class="search-count"></div>
             </div>
 
@@ -57,7 +73,9 @@
 
             <!-- Placeholder cuando no hay selección -->
             <div class="placeholder" id="placeholder">
-                <div class="placeholder-icon">📋</div>
+                <div class="placeholder-icon">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                </div>
                 <h2>Selecciona un estudiante</h2>
                 <p>Haz clic en un nombre de la lista para ver su hoja de ruta con la malla antigua y la malla nueva.</p>
             </div>
@@ -71,9 +89,15 @@
                     <div class="student-info">
                         <h2 id="detNombre" class="det-nombre"></h2>
                         <div class="det-meta">
-                            <span id="detRegistro" class="meta-badge"></span>
-                            <span id="detIngreso" class="meta-badge"></span>
-                            <span id="detVenc" class="meta-badge"></span>
+                            <span id="detRegistro" class="meta-badge">
+                                <i class="fa-solid fa-id-card"></i>
+                            </span>
+                            <span id="detIngreso" class="meta-badge">
+                                <i class="fa-solid fa-calendar"></i>
+                            </span>
+                            <span id="detVenc" class="meta-badge">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            </span>
                         </div>
                     </div>
                     <div class="det-progress">
@@ -90,10 +114,18 @@
 
                 <!-- Tabs -->
                 <div class="tabs">
-                    <button class="tab active" id="tabAntigua" onclick="mostrarTab('antigua')">📗 Malla Antigua (Plan
-                        148-1)</button>
-                    <button class="tab" id="tabNueva" onclick="mostrarTab('nueva')">📘 Malla Nueva (Plan 148-2)</button>
-                    <button class="tab" id="tabConv" onclick="mostrarTab('conv')">🔄 Tabla de Convalidaciones</button>
+                    <button class="tab active" id="tabAntigua" onclick="mostrarTab('antigua')">
+                        <i class="fa-solid fa-book"></i> Malla Antigua (Plan 148-1)
+                    </button>
+                    <button class="tab" id="tabNueva" onclick="mostrarTab('nueva')">
+                        <i class="fa-solid fa-book-open"></i> Malla Nueva (Plan 148-2)
+                    </button>
+                    <button class="tab" id="tabConv" onclick="mostrarTab('conv')">
+                        <i class="fa-solid fa-right-left"></i> Tabla de Convalidaciones
+                    </button>
+                    <button class="tab tab-sug" id="tabSug" onclick="mostrarTab('sug')">
+                        <i class="fa-solid fa-lightbulb"></i> Sugerencias 1/2026 &middot; 2/2026
+                    </button>
                 </div>
 
                 <!-- Leyenda -->
@@ -101,6 +133,7 @@
                     <span class="ley-item"><span class="ley-dot ley-aprobada"></span>Aprobada</span>
                     <span class="ley-item"><span class="ley-dot ley-reprobada"></span>Reprobada</span>
                     <span class="ley-item"><span class="ley-dot ley-pendiente"></span>Pendiente</span>
+                    <span class="ley-item"><span class="ley-dot ley-pendiente-critico"></span>Pendiente crítico (nueva malla)</span>
                     <span class="ley-item"><span class="ley-dot ley-eliminada"></span>Eliminada del plan</span>
                     <span class="ley-item"><span class="ley-dot ley-homolog"></span>Homologación</span>
                     <span class="ley-item"><span class="ley-dot ley-convalid"></span>Convalidación</span>
@@ -111,6 +144,7 @@
                 <div id="contentAntigua" class="tab-content"></div>
                 <div id="contentNueva" class="tab-content" style="display:none"></div>
                 <div id="contentConv" class="tab-content" style="display:none"></div>
+                <div id="contentSug" class="tab-content" style="display:none"></div>
 
             </div><!-- /studentDetail -->
         </main>
