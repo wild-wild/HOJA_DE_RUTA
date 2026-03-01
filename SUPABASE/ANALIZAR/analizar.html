@@ -50,6 +50,71 @@
         .student-header {
             max-width: 1400px;
             margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        /* Estilos para el modo edición */
+        .edit-controls {
+            display: none;
+            gap: 10px;
+            margin-top: 1rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        body.modo-edicion .edit-controls {
+            display: flex;
+        }
+
+        body.modo-edicion .btn-edit-main {
+            display: none;
+        }
+
+        .mat-card.editable {
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .mat-card.editable:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .mat-card.edit-selected {
+            border: 2px solid #1e3a8a !important;
+            background: #eff6ff !important;
+        }
+
+        .mat-card.edit-selected::after {
+            content: "\f058";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            color: #1e3a8a;
+            font-size: 0.8rem;
+        }
+
+        .btn-action {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn-save {
+            background: #1e3a8a;
+            color: white;
+        }
+
+        .btn-cancel {
+            background: #f1f5f9;
+            color: #475569;
         }
     </style>
 </head>
@@ -138,6 +203,25 @@
                             </span>
                             <span id="detVenc" class="meta-badge">
                                 <i class="fa-solid fa-triangle-exclamation"></i>
+                            </span>
+                        </div>
+
+                        <!-- Botón Editar -->
+                        <button onclick="activarModoEdicion()"
+                            class="btn-action btn-edit-main mt-4 border border-blue-200 text-blue-800 hover:bg-blue-50">
+                            <i class="fa-solid fa-user-pen"></i> Editar Materias
+                        </button>
+
+                        <!-- Controles de Edición -->
+                        <div class="edit-controls">
+                            <button onclick="guardarCambiosEdicion()" class="btn-action btn-save">
+                                <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
+                            </button>
+                            <button onclick="desactivarModoEdicion()" class="btn-action btn-cancel">
+                                <i class="fa-solid fa-xmark"></i> Cancelar
+                            </button>
+                            <span class="text-xs text-blue-600 font-medium flex items-center italic">
+                                <i class="fa-solid fa-circle-info mr-1"></i> Haz clic en las materias para marcarlas
                             </span>
                         </div>
                     </div>

@@ -1140,6 +1140,8 @@ let todosLosEstudiantes = [];
 let estudianteFiltrado = [];
 let estudianteActual = null;
 let tabActual = "antigua";
+let modoEdicion = false;
+let materiasEditadas = new Set();
 
 // ─────────────────────────────────────────────────────────────
 // 3. CARGA DESDE SUPABASE
@@ -1280,6 +1282,7 @@ function renderLista(lista) {
 // 5. SELECCIONAR ESTUDIANTE
 // ─────────────────────────────────────────────────────────────
 function seleccionarEstudiante(est) {
+  console.log("Datos del estudiante seleccionado (columnas):", Object.keys(est));
   estudianteActual = est;
   document
     .querySelectorAll(".student-item")
@@ -1306,6 +1309,128 @@ function seleccionarEstudiante(est) {
 
   mostrarTab(tabActual);
 }
+
+// ─────────────────────────────────────────────────────────────
+// 5.1. MODO EDICIÓN
+// ─────────────────────────────────────────────────────────────
+window.activarModoEdicion = function () {
+  if (!estudianteActual) return;
+  modoEdicion = true;
+  materiasEditadas.clear();
+  document.body.classList.add('modo-edicion');
+
+  // Hacer que las tarjetas sean interactivas
+  const cards = document.querySelectorAll('.mat-card');
+  cards.forEach(card => {
+    const sigla = card.querySelector('.mat-sigla')?.textContent ||
+      card.querySelector('.mat-sigla-nueva')?.textContent;
+
+    if (!sigla) return;
+
+    card.classList.add('editable');
+    card.onclick = (e) => togglerMateriaEdicion(sigla, card);
+  });
+};
+
+window.desactivarModoEdicion = function () {
+  modoEdicion = false;
+  materiasEditadas.clear();
+  document.body.classList.remove('modo-edicion');
+
+  // Volver a renderizar para limpiar estados visuales de edición
+  mostrarTab(tabActual);
+};
+
+function togglerMateriaEdicion(sigla, cardEl) {
+  if (!modoEdicion) return;
+
+  // Verificar si ya está aprobada en la base de datos
+  const notaOriginal = estudianteActual[sigla];
+  const aprobadaOriginal = notaOriginal != null && !isNaN(Number(notaOriginal)) && Number(notaOriginal) >= 51;
+
+  if (materiasEditadas.has(sigla)) {
+    materiasEditadas.delete(sigla);
+    cardEl.classList.remove('edit-selected');
+  } else {
+    // Solo permitir seleccionar si no estaba aprobada ya
+    if (!aprobadaOriginal) {
+      materiasEditadas.add(sigla);
+      cardEl.classList.add('edit-selected');
+    }
+  }
+}
+
+window.guardarCambiosEdicion = async function () {
+  if (materiasEditadas.size === 0) {
+    desactivarModoEdicion();
+    return;
+  }
+
+  const btnSave = document.querySelector('.btn-save');
+  const originalContent = btnSave.innerHTML;
+  btnSave.disabled = true;
+  btnSave.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin"></i> Guardando...';
+
+  try {
+    // 1. Obtener el registro actual de Supabase para tener la versión más reciente de 'materias'
+    const { data: currentData, error: fetchError } = await supabase
+      .from('estudiantes')
+      .select('materias')
+      .eq('registro', estudianteActual.Registro)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    let materiasActuales = currentData.materias || {};
+
+    // 2. Aplicar los cambios
+    materiasEditadas.forEach(sigla => {
+      materiasActuales[sigla] = 51; // Nota por defecto (pasada)
+    });
+
+    // 3. Recalcular estadísticas para mantener coherencia en la tabla
+    let aprobadas = 0;
+    CONVALIDACIONES.forEach(c => {
+      const sigla = c[0];
+      const nota = materiasActuales[sigla];
+      if (nota != null && !isNaN(Number(nota)) && Number(nota) >= 51) {
+        aprobadas++;
+      }
+    });
+
+    const totalMaterias = CONVALIDACIONES.length;
+    const porcentaje = Math.round((aprobadas / totalMaterias) * 100);
+
+    // 4. Actualizar en Supabase enfocándose en la columna JSONB 'materias'
+    const { error: updateError } = await supabase
+      .from('estudiantes')
+      .update({
+        materias: materiasActuales,
+        total_aprobadas: aprobadas,
+        total_pendientes: totalMaterias - aprobadas,
+        porcentaje_avance: porcentaje,
+        timestamp_subida: new Date().toISOString()
+      })
+      .eq('registro', estudianteActual.Registro);
+
+    if (updateError) throw updateError;
+
+    alert('🎉 Materias actualizadas correctamente');
+
+    await cargarEstudiantes();
+
+    const actualizado = todosLosEstudiantes.find(e => e.Registro === estudianteActual.Registro);
+    if (actualizado) seleccionarEstudiante(actualizado);
+
+    desactivarModoEdicion();
+  } catch (err) {
+    console.error("Error al guardar:", err);
+    alert("❌ Error al guardar los cambios: " + err.message);
+  } finally {
+    btnSave.disabled = false;
+    btnSave.innerHTML = originalContent;
+  }
+};
 
 // ─────────────────────────────────────────────────────────────
 // 6. TABS
