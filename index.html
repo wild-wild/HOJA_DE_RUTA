@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hoja de Ruta – Gestión Académica</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --primary-light: #3b82f6;
+            --accent: #2563eb;
+            --bg-grad: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            --card-hover: 0 20px 25px -5px rgba(37, 99, 235, 0.1), 0 10px 10px -6px rgba(37, 99, 235, 0.05);
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-grad);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .glass-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--card-hover);
+            border-color: var(--primary-light);
+        }
+
+        .icon-box {
+            width: 70px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 18px;
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s;
+        }
+
+        .card-upload {
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+
+        .card-analysis {
+            background: #fdf2f8;
+            color: #be185d;
+        }
+
+        .card-register {
+            background: #f0fdf4;
+            color: #15803d;
+        }
+
+        .glass-card:hover .icon-box {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .hero-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 400px;
+            background-color: #1e3a8a;
+            background-image: radial-gradient(at 0% 0%, hsla(222, 47%, 11%, 1) 0, transparent 50%),
+                radial-gradient(at 50% 0%, hsla(222, 80%, 25%, 1) 0, transparent 50%),
+                radial-gradient(at 100% 0%, hsla(222, 47%, 11%, 1) 0, transparent 50%);
+            z-index: -1;
+            clip-path: polygon(0 0, 100% 0, 100% 85%, 0 100%);
+        }
+
+        .floating {
+            animation: floating 3s ease-in-out infinite;
+        }
+
+        @keyframes floating {
+            0% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+
+            100% {
+                transform: translateY(0px);
+            }
+        }
+    </style>
+</head>
+
+<body class="p-6 md:p-12 relative overflow-x-hidden">
+    <div class="hero-pattern"></div>
+
+    <header class="max-w-6xl mx-auto w-full mb-16 text-white text-center">
+        <div class="flex justify-center mb-6">
+            <div class="bg-white/10 backdrop-blur-md p-4 rounded-full border border-white/20 floating">
+                <i class="fa-solid fa-graduation-cap text-4xl"></i>
+            </div>
+        </div>
+        <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight mb-4">Hoja de Ruta Académica</h1>
+        <p class="text-xl text-blue-100/80 font-light max-w-2xl mx-auto">
+            Sistema integral de gestión, análisis y registro de estudiantes para la Carrera de Psicología (Plan 148).
+        </p>
+    </header>
+
+    <main class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
+        <!-- ACCESO: SUBIR DATOS -->
+        <a href="SUPABASE/SUBIR/templates/index.html"
+            class="glass-card p-8 rounded-3xl flex flex-col items-center text-center group">
+            <div class="icon-box card-upload group-hover:bg-blue-600 group-hover:text-white">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-800 mb-3">Subir Datos</h2>
+            <p class="text-slate-500 text-sm leading-relaxed mb-6">
+                Carga archivos Excel con la información de estudiantes y sus calificaciones directamente a la base de
+                datos.
+            </p>
+            <span
+                class="mt-auto inline-flex items-center text-blue-600 font-semibold group-hover:translate-x-1 transition-transform">
+                Acceder al cargador <i class="fa-solid fa-chevron-right ml-2 text-xs"></i>
+            </span>
+        </a>
+
+        <!-- ACCESO: ANALIZAR -->
+        <a href="SUPABASE/ANALIZAR/analizar.html"
+            class="glass-card p-8 rounded-3xl flex flex-col items-center text-center group">
+            <div class="icon-box card-analysis group-hover:bg-pink-600 group-hover:text-white">
+                <i class="fa-solid fa-chart-line"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-800 mb-3">Hoja de Ruta</h2>
+            <p class="text-slate-500 text-sm leading-relaxed mb-6">
+                Consulta el avance académico, convalidaciones y sugerencias de materias para los semestres 2026.
+            </p>
+            <span
+                class="mt-auto inline-flex items-center text-pink-600 font-semibold group-hover:translate-x-1 transition-transform">
+                Ver análisis <i class="fa-solid fa-chevron-right ml-2 text-xs"></i>
+            </span>
+        </a>
+
+        <!-- ACCESO: NUEVOS REGISTROS -->
+        <a href="SUPABASE/ANALIZAR/nuevosRegistros.html"
+            class="glass-card p-8 rounded-3xl flex flex-col items-center text-center group">
+            <div class="icon-box card-register group-hover:bg-green-600 group-hover:text-white">
+                <i class="fa-solid fa-user-plus"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-800 mb-3">Nuevo Registro</h2>
+            <p class="text-slate-500 text-sm leading-relaxed mb-6">
+                Registra nuevos estudiantes manualmente y selecciona su historial de materias mediante la malla
+                interactiva.
+            </p>
+            <span
+                class="mt-auto inline-flex items-center text-green-600 font-semibold group-hover:translate-x-1 transition-transform">
+                Registrar ahora <i class="fa-solid fa-chevron-right ml-2 text-xs"></i>
+            </span>
+        </a>
+    </main>
+
+    <footer class="mt-auto pt-16 pb-8 text-center text-slate-400 text-sm">
+        <p>© 2026 Facultad de Humanidades · UAGRM</p>
+        <div class="flex justify-center gap-4 mt-2">
+            <span class="inline-flex items-center"><i class="fa-solid fa-database mr-1"></i> Supabase Active</span>
+            <span class="inline-flex items-center"><i class="fa-solid fa-layer-group mr-1"></i> Plan 148-1/148-2</span>
+        </div>
+    </footer>
+</body>
+
+</html>
