@@ -14,6 +14,26 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
         rel="stylesheet" />
+    <script>
+        // Verificación de sesión Psiconet
+        (function () {
+            const session = localStorage.getItem('psiconet_session');
+            if (!session) {
+                window.location.href = '../../index.html'; // Redirigir al login
+                return;
+            }
+            try {
+                const data = JSON.parse(session);
+                const now = new Date().getTime();
+                if (now - data.timestamp > 24 * 60 * 60 * 1000) { // Expirar en 24h
+                    localStorage.removeItem('psiconet_session');
+                    window.location.href = '../../index.html';
+                }
+            } catch (e) {
+                window.location.href = '../../index.html';
+            }
+        })();
+    </script>
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
@@ -127,6 +147,17 @@
                     <p class="brand-sub">Malla Plan 148-1 (Antigua)</p>
                 </div>
             </div>
+            <!-- Navegación -->
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <a href="../../a_d_m_i_n.html" class="tab active"
+                    style="padding: 5px 15px; border-radius: 20px; font-size: 13px; text-decoration: none;">
+                    <i class="fa-solid fa-arrow-left"></i> Volver
+                </a>
+                <button onclick="logout()" class="tab"
+                    style="padding: 5px 15px; border-radius: 20px; font-size: 13px; background: rgba(239, 68, 68, 0.1); color: #ef4444;">
+                    <i class="fa-solid fa-right-from-bracket"></i> Salir
+                </button>
+            </div>
         </div>
     </header>
 
@@ -201,6 +232,12 @@
 
     <div id="toastContainer" class="fixed bottom-4 right-4 z-50"></div>
 
+    <script>
+        function logout() {
+            localStorage.removeItem('psiconet_session');
+            window.location.href = '../../index.html';
+        }
+    </script>
     <script type="module" src="registros.js"></script>
 </body>
 

@@ -4,25 +4,45 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Subir Estudiantes a Supabase</title>
+  <title>Subir Estudiantes</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet">
+  <script>
+    // Verificación de sesión Psiconet
+    (function () {
+      const session = localStorage.getItem('psiconet_session');
+      if (!session) {
+        window.location.href = '../../../index.html'; // Redirigir al login
+        return;
+      }
+      try {
+        const data = JSON.parse(session);
+        const now = new Date().getTime();
+        if (now - data.timestamp > 24 * 60 * 60 * 1000) { // Expirar en 24h
+          localStorage.removeItem('psiconet_session');
+          window.location.href = '../../../index.html';
+        }
+      } catch (e) {
+        window.location.href = '../../../index.html';
+      }
+    })();
+  </script>
   <style>
     :root {
-      --bg: #0a0e1a;
-      --surface: #111827;
-      --surface2: #1a2336;
-      --border: #1e2d47;
-      --accent: #3ecf8e;
-      --accent2: #38bdf8;
-      --blue: #3b82f6;
-      --green: #22c55e;
-      --red: #ef4444;
-      --yellow: #eab308;
-      --text: #f1f5f9;
-      --text-muted: #64748b;
-      --text-soft: #94a3b8;
+      --bg: #f0f4f8;
+      --surface: #ffffff;
+      --surface2: #f8fafc;
+      --border: #cbd5e1;
+      --accent: #1e3a8a;
+      --accent2: #4f46e5;
+      --blue: #2563eb;
+      --green: #15803d;
+      --red: #b91c1c;
+      --yellow: #ca8a04;
+      --text: #0f172a;
+      --text-muted: #475569;
+      --text-soft: #64748b;
     }
 
     * {
@@ -40,41 +60,45 @@
 
     /* HEADER */
     header {
-      background: linear-gradient(135deg, #0f172a 0%, #0d2b1f 100%);
-      border-bottom: 1px solid var(--border);
-      padding: 20px 32px;
+      background: var(--accent);
+      border-bottom: none;
+      padding: 16px 32px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
       display: flex;
       align-items: center;
       gap: 16px;
     }
 
     .header-icon {
-      width: 48px;
-      height: 48px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      width: 44px;
+      height: 44px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.25);
       border-radius: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 24px;
+      font-size: 22px;
+      color: #fff;
     }
 
     header h1 {
-      font-size: 22px;
+      font-size: 20px;
       font-weight: 700;
+      color: #fff;
     }
 
     header p {
       font-size: 13px;
-      color: var(--text-muted);
+      color: rgba(255, 255, 255, 0.7);
       margin-top: 2px;
     }
 
     .supabase-badge {
       margin-left: auto;
-      background: rgba(62, 207, 142, 0.15);
-      border: 1px solid rgba(62, 207, 142, 0.35);
-      color: var(--accent);
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
       font-size: 12px;
       font-weight: 600;
       padding: 6px 14px;
@@ -90,7 +114,8 @@
 
     .btn-analizar {
       margin-left: 10px;
-      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
       color: #fff;
       font-size: 13px;
       font-weight: 600;
@@ -101,13 +126,11 @@
       align-items: center;
       gap: 6px;
       transition: all 0.2s;
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-      white-space: nowrap;
     }
 
     .btn-analizar:hover {
+      background: rgba(255, 255, 255, 0.25);
       transform: translateY(-1px);
-      box-shadow: 0 6px 18px rgba(99, 102, 241, 0.45);
     }
 
     /* MAIN */
@@ -153,19 +176,23 @@
     }
 
     .stat-icon.green-ish {
-      background: rgba(62, 207, 142, 0.15);
+      background: #f0fdf4;
+      color: #16a34a;
     }
 
     .stat-icon.blue {
-      background: rgba(59, 130, 246, 0.15);
+      background: #eff6ff;
+      color: #2563eb;
     }
 
     .stat-icon.green {
-      background: rgba(34, 197, 94, 0.15);
+      background: #f0fdf4;
+      color: #15803d;
     }
 
     .stat-icon.yellow {
-      background: rgba(234, 179, 8, 0.15);
+      background: #fefce8;
+      color: #ca8a04;
     }
 
     .stat-val {
@@ -221,14 +248,14 @@
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, var(--accent), #2dd4bf);
-      color: #0a1a12;
-      box-shadow: 0 4px 15px rgba(62, 207, 142, 0.3);
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #ffffff;
+      box-shadow: 0 4px 15px rgba(30, 58, 138, 0.2);
     }
 
     .btn-primary:hover:not(:disabled) {
       transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(62, 207, 142, 0.45);
+      box-shadow: 0 6px 20px rgba(30, 58, 138, 0.35);
     }
 
     .btn-outline {
@@ -411,9 +438,9 @@
     }
 
     .badge-aprobadas {
-      background: rgba(34, 197, 94, 0.12);
+      background: rgba(21, 128, 61, 0.1);
       color: var(--green);
-      border: 1px solid rgba(34, 197, 94, 0.25);
+      border: 1px solid rgba(21, 128, 61, 0.2);
       padding: 3px 9px;
       border-radius: 99px;
       font-size: 12px;
@@ -477,8 +504,8 @@
     }
 
     .estado-supabase.ok {
-      background: rgba(62, 207, 142, 0.12);
-      color: var(--accent);
+      background: rgba(21, 128, 61, 0.1);
+      color: var(--green);
     }
 
     .estado-supabase.error {
@@ -553,10 +580,17 @@
       <h1>Estudiantes → Supabase</h1>
       <p>Carga masiva desde Excel con pandas</p>
     </div>
-    <div class="supabase-badge">psiconet-hoja-de-ruta</div>
-    <a href="/analizar" class="btn-analizar" title="Ver hojas de ruta de los estudiantes">
-      📊 Ver Análisis
-    </a>
+
+    <!-- Navegación -->
+    <div style="margin-left: auto; display: flex; gap: 10px;">
+      <a href="../../../a_d_m_i_n.html" class="btn-analizar">
+        ⬅️ Volver
+      </a>
+      <button onclick="logout()" class="btn-analizar"
+        style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.3);">
+        🚪 Salir
+      </button>
+    </div>
   </header>
 
   <main>
@@ -600,7 +634,7 @@
         📂 Cargar Excel
       </button>
       <button class="btn btn-primary" id="btnSubir" onclick="subirTodos()" disabled>
-        ⚡ Subir a Supabase
+        ⚡ Subir
       </button>
     </div>
 
@@ -668,6 +702,11 @@
     let columnasMaterias = [];  // nombres de columnas de materias del Excel
     let columnasInfo = ['Registro', 'Nombre', 'Fec_ingreso', 'Niv_min', 'Mat_venc'];
     let estadoSupabase = {}; // registro -> 'pendiente' | 'subiendo' | 'ok' | 'error'
+
+    function logout() {
+      localStorage.removeItem('psiconet_session');
+      window.location.href = '../../../index.html';
+    }
 
     /* ---- CARGAR DATOS DESDE FLASK ---- */
     async function cargarDatos() {

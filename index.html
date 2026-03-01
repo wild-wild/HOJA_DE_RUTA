@@ -2,192 +2,187 @@
 <html lang="es">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hoja de Ruta – Gestión Académica</title>
-
-    <!-- Tailwind CSS CDN -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso al Sistema - PSICONET360</title>
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet" />
-
-    <!-- Font Awesome -->
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-
     <style>
-        :root {
-            --primary: #1e3a8a;
-            --primary-light: #3b82f6;
-            --accent: #2563eb;
-            --bg-grad: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-            --card-hover: 0 20px 25px -5px rgba(37, 99, 235, 0.1), 0 10px 10px -6px rgba(37, 99, 235, 0.05);
-        }
-
         body {
             font-family: 'Outfit', sans-serif;
-            background: var(--bg-grad);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .slide-up {
+            animation: slideUp 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
 
         .glass-card {
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.3);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .glass-card:hover {
-            transform: translateY(-8px);
-            box-shadow: var(--card-hover);
-            border-color: var(--primary-light);
-        }
-
-        .icon-box {
-            width: 70px;
-            height: 70px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 18px;
-            font-size: 2rem;
-            margin-bottom: 1.5rem;
-            transition: all 0.3s;
-        }
-
-        .card-upload {
-            background: #eff6ff;
-            color: #1d4ed8;
-        }
-
-        .card-analysis {
-            background: #fdf2f8;
-            color: #be185d;
-        }
-
-        .card-register {
-            background: #f0fdf4;
-            color: #15803d;
-        }
-
-        .glass-card:hover .icon-box {
-            transform: scale(1.1) rotate(5deg);
-        }
-
-        .hero-pattern {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 400px;
-            background-color: #1e3a8a;
-            background-image: radial-gradient(at 0% 0%, hsla(222, 47%, 11%, 1) 0, transparent 50%),
-                radial-gradient(at 50% 0%, hsla(222, 80%, 25%, 1) 0, transparent 50%),
-                radial-gradient(at 100% 0%, hsla(222, 47%, 11%, 1) 0, transparent 50%);
-            z-index: -1;
-            clip-path: polygon(0 0, 100% 0, 100% 85%, 0 100%);
-        }
-
-        .floating {
-            animation: floating 3s ease-in-out infinite;
-        }
-
-        @keyframes floating {
-            0% {
-                transform: translateY(0px);
-            }
-
-            50% {
-                transform: translateY(-10px);
-            }
-
-            100% {
-                transform: translateY(0px);
-            }
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
         }
     </style>
 </head>
 
-<body class="p-6 md:p-12 relative overflow-x-hidden">
-    <div class="hero-pattern"></div>
+<body
+    class="bg-gradient-to-br from-[#0f172a] to-[#1e3a8a] min-h-screen flex items-center justify-center p-4 text-slate-800">
 
-    <header class="max-w-6xl mx-auto w-full mb-16 text-white text-center">
-        <div class="flex justify-center mb-6">
-            <div class="bg-white/10 backdrop-blur-md p-4 rounded-full border border-white/20 floating">
-                <i class="fa-solid fa-graduation-cap text-4xl"></i>
+    <div class="glass-card rounded-3xl p-10 max-w-md w-full slide-up text-center block">
+
+        <div
+            class="mx-auto bg-blue-50 w-20 h-20 rounded-2xl flex items-center justify-center mb-8 shadow-inner border border-blue-100 rotate-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-[#1e3a8a]" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+        </div>
+
+        <h1 class="text-3xl font-extrabold text-[#1e3a8a] mb-2">Portal de Acceso</h1>
+        <p class="text-slate-500 mb-10 text-sm">Ingresa tu código de autorización para continuar al panel
+            administrativo.</p>
+
+        <div class="space-y-6">
+            <div class="relative group">
+                <input type="password" id="accessCode" placeholder="Código de acceso"
+                    class="w-full px-6 py-4 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-[#1e3a8a] focus:ring-4 focus:ring-blue-800/10 outline-none transition-all text-center text-xl font-bold tracking-widest placeholder:tracking-normal placeholder:font-normal"
+                    onkeypress="if(event.key === 'Enter') validateLogin()">
+                <div
+                    class="absolute inset-y-0 right-14 flex items-center pointer-events-none text-slate-300 group-focus-within:text-[#1e3a8a] transition-colors">
+                    <i class="fa-solid fa-key"></i>
+                </div>
+                <!-- Botón para mostrar/ocultar password -->
+                <button type="button" onclick="togglePassword()"
+                    class="absolute inset-y-0 right-4 flex items-center text-slate-400 hover:text-[#1e3a8a] transition-colors focus:outline-none">
+                    <i id="toggleIcon" class="fa-solid fa-eye"></i>
+                </button>
+            </div>
+
+            <button id="loginBtn" onclick="validateLogin()"
+                class="w-full bg-[#1e3a8a] text-white py-4 rounded-2xl font-bold text-lg hover:bg-blue-900 transition-all shadow-xl shadow-blue-900/20 active:scale-[0.98] flex items-center justify-center gap-3">
+                <span>Entrar al Sistema</span>
+                <i class="fa-solid fa-arrow-right text-sm"></i>
+            </button>
+
+            <div id="errorMessage"
+                class="hidden animate-bounce text-red-600 font-semibold text-sm mt-4 bg-red-50 py-2 rounded-lg border border-red-100">
+                ⚠️ Código de acceso incorrecto
             </div>
         </div>
-        <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight mb-4">Hoja de Ruta Académica</h1>
-        <p class="text-xl text-blue-100/80 font-light max-w-2xl mx-auto">
-            Sistema integral de gestión, análisis y registro de estudiantes para la Carrera de Psicología (Plan 148).
-        </p>
-    </header>
 
-    <main class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
-        <!-- ACCESO: SUBIR DATOS -->
-        <a href="SUPABASE/SUBIR/templates/index.html"
-            class="glass-card p-8 rounded-3xl flex flex-col items-center text-center group">
-            <div class="icon-box card-upload group-hover:bg-blue-600 group-hover:text-white">
-                <i class="fa-solid fa-cloud-arrow-up"></i>
-            </div>
-            <h2 class="text-2xl font-bold text-slate-800 mb-3">Subir Datos</h2>
-            <p class="text-slate-500 text-sm leading-relaxed mb-6">
-                Carga archivos Excel con la información de estudiantes y sus calificaciones directamente a la base de
-                datos.
-            </p>
-            <span
-                class="mt-auto inline-flex items-center text-blue-600 font-semibold group-hover:translate-x-1 transition-transform">
-                Acceder al cargador <i class="fa-solid fa-chevron-right ml-2 text-xs"></i>
-            </span>
-        </a>
-
-        <!-- ACCESO: ANALIZAR -->
-        <a href="SUPABASE/ANALIZAR/analizar.html"
-            class="glass-card p-8 rounded-3xl flex flex-col items-center text-center group">
-            <div class="icon-box card-analysis group-hover:bg-pink-600 group-hover:text-white">
-                <i class="fa-solid fa-chart-line"></i>
-            </div>
-            <h2 class="text-2xl font-bold text-slate-800 mb-3">Hoja de Ruta</h2>
-            <p class="text-slate-500 text-sm leading-relaxed mb-6">
-                Consulta el avance académico, convalidaciones y sugerencias de materias para los semestres 2026.
-            </p>
-            <span
-                class="mt-auto inline-flex items-center text-pink-600 font-semibold group-hover:translate-x-1 transition-transform">
-                Ver análisis <i class="fa-solid fa-chevron-right ml-2 text-xs"></i>
-            </span>
-        </a>
-
-        <!-- ACCESO: NUEVOS REGISTROS -->
-        <a href="SUPABASE/ANALIZAR/nuevosRegistros.html"
-            class="glass-card p-8 rounded-3xl flex flex-col items-center text-center group">
-            <div class="icon-box card-register group-hover:bg-green-600 group-hover:text-white">
-                <i class="fa-solid fa-user-plus"></i>
-            </div>
-            <h2 class="text-2xl font-bold text-slate-800 mb-3">Nuevo Registro</h2>
-            <p class="text-slate-500 text-sm leading-relaxed mb-6">
-                Registra nuevos estudiantes manualmente y selecciona su historial de materias mediante la malla
-                interactiva.
-            </p>
-            <span
-                class="mt-auto inline-flex items-center text-green-600 font-semibold group-hover:translate-x-1 transition-transform">
-                Registrar ahora <i class="fa-solid fa-chevron-right ml-2 text-xs"></i>
-            </span>
-        </a>
-    </main>
-
-    <footer class="mt-auto pt-16 pb-8 text-center text-slate-400 text-sm">
-        <p>© 2026 Facultad de Humanidades · UAGRM</p>
-        <div class="flex justify-center gap-4 mt-2">
-            <span class="inline-flex items-center"><i class="fa-solid fa-database mr-1"></i> Supabase Active</span>
-            <span class="inline-flex items-center"><i class="fa-solid fa-layer-group mr-1"></i> Plan 148-1/148-2</span>
+        <div class="mt-12 pt-8 border-t border-slate-100">
+            <p class="text-[10px] text-slate-400 uppercase tracking-[0.2em] font-bold">UAGRM &middot; Facultad de
+                Humanidades</p>
         </div>
-    </footer>
+    </div>
+
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+        const SUPABASE_URL = "https://kylsbkxxpsntlhhsdqgw.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_7KbBls3f9-VlD0uj2ZU2sg_ll3-mJ5_";
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth: {
+                persistSession: false,
+                autoRefreshToken: false,
+                detectSessionInUrl: false
+            }
+        });
+
+        function togglePassword() {
+            const input = document.getElementById('accessCode');
+            const icon = document.getElementById('toggleIcon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
+
+        async function validateLogin() {
+            const input = document.getElementById('accessCode');
+            const btn = document.getElementById('loginBtn');
+            const error = document.getElementById('errorMessage');
+            const code = input.value.trim();
+
+            if (!code) return;
+
+            // UI Feedback
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin"></i> Verificando...';
+            error.classList.add('hidden');
+
+            try {
+                // Verificar en la tabla access_codes
+                const { data, error: dbError } = await _supabase
+                    .from('access_codes')
+                    .select('*')
+                    .eq('code', code)
+                    .eq('is_active', true)
+                    .single();
+
+                if (dbError || !data) {
+                    throw new Error("Código inválido");
+                }
+
+                // Éxito: Guardar sesión y redirigir
+                localStorage.setItem('psiconet_session', JSON.stringify({
+                    auth: true,
+                    timestamp: new Date().getTime()
+                }));
+
+                window.location.href = 'a_d_m_i_n.html';
+
+            } catch (err) {
+                console.error(err);
+                error.classList.remove('hidden');
+                input.value = '';
+                input.focus();
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>Entrar al Sistema</span><i class="fa-solid fa-arrow-right text-sm"></i>';
+            }
+        }
+
+        // Proteger página: si ya está logueado, ir al admin
+        if (localStorage.getItem('psiconet_session')) {
+            window.location.href = 'a_d_m_i_n.html';
+        }
+    </script>
 </body>
 
 </html>
