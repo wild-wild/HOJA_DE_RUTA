@@ -6,7 +6,13 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 const SUPABASE_URL = "https://kylsbkxxpsntlhhsdqgw.supabase.co";
 const SUPABASE_KEY = "sb_publishable_7KbBls3f9-VlD0uj2ZU2sg_ll3-mJ5_"; // publishable key (solo lectura con RLS)
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false
+  }
+});
 
 // ─────────────────────────────────────────────────────────────
 // 1. TABLA DE CONVALIDACIONES  (del Excel convalidaciones.xlsx)
@@ -1431,15 +1437,15 @@ function renderMallaAntigua(est) {
         <div class="sem-col-header" style="background:${sec.color}20;border-color:${sec.color}60;color:${sec.color}">
           <span class="sem-num">${sec.label}</span>
           <span class="sem-full-name">${sec.key}</span>
-          <span class="sem-count">${mats.length} mat.</span>
+          <span class="sem-count" id="count-${sec.key}">0/${mats.length}</span>
         </div>
         <div class="sem-col-body">
           ${mats.map((m) => {
-            const nota = est[m.sigla];
-            const n = nota != null && nota !== '' && !isNaN(Number(nota)) ? Number(nota) : null;
-            const critica = esSemCritico && n === null && m.tipo !== 'ELIMINADA';
-            return tarjetaMateria(m.sigla, m.nombre, nota, m.tipo, true, critica);
-          }).join("")}
+      const nota = est[m.sigla];
+      const n = nota != null && nota !== '' && !isNaN(Number(nota)) ? Number(nota) : null;
+      const critica = esSemCritico && n === null && m.tipo !== 'ELIMINADA';
+      return tarjetaMateria(m.sigla, m.nombre, nota, m.tipo, true, critica);
+    }).join("")}
         </div>
       </div>`;
   });
@@ -1697,10 +1703,10 @@ document.getElementById("searchInput").addEventListener("input", (e) => {
   estudianteFiltrado = !q
     ? [...todosLosEstudiantes]
     : todosLosEstudiantes.filter(
-        (est) =>
-          (est.Nombre ?? "").toLowerCase().includes(q) ||
-          (est.Registro ?? "").toString().toLowerCase().includes(q),
-      );
+      (est) =>
+        (est.Nombre ?? "").toLowerCase().includes(q) ||
+        (est.Registro ?? "").toString().toLowerCase().includes(q),
+    );
   renderLista(estudianteFiltrado);
 });
 
@@ -1725,47 +1731,47 @@ const SEM_NUM = {
 // Fuente: prerrequisitos148-1.xlsx
 // ─────────────────────────────────────────────────────────────
 const PREREQ_148_1 = {
-  ANT150:"ANT100", BIO150:"BIO100", CSO150:"CSO101",
-  EST152:"EST121", FIL150:"FIL101", PSI150:"PSI101",
-  BIO200:"BIO150", CSO200:"CSO150", CSO201:"ANT150",
-  INV200:"EST152, FIL150", PSI200:"PSI150",
-  PSI202:"PSI150", PSI203:"PSI150",
-  BIO250:"BIO200", CSO250:"CSO200", INV250:"INV200",
-  PSI254:"PSI200", PSI255:"PSI200",
-  PSI256:"PSI202, PSI203",
-  PSI313:"PSI254, BIO250",
-  CSO350:"CSO300", INV350:"INV300",
-  PSI350:"PSI310", PSI351:"PSI311", PSI352:"PSI312",
-  PSI353:"PSI256, PSI310", PSI354:"PSI313",
-  CSO401:"CSO201, CSO350", INV400:"INV350",
-  PSI400:"PSI350, PSI354", PSI401:"PSI351, PSI353",
-  PSI402:"PSI352",
-  CSO450:"CSO400", CSO451:"CSO401",
-  INV450:"INV400",
-  PSI450:"PSI400", PSI451:"PSI401", PSI452:"PSI402",
-  DEP500:"PSI451", DEP501:"DEP500",
-  CSO452:"CSO451", CSO453:"CSO451", CSO454:"CSO451",
-  CSO455:"CSO452", CSO456:"CSO453", CSO457:"CSO454",
-  PSI500:"PSI450", PSI501:"PSI452", PSI502:"CSO451",
-  PSI503:"PSI500", PSI504:"PSI501", PSI505:"PSI502",
-  PSI600:"PSI450", PSI601:"PSI452", PSI602:"CSO451",
-  PSI603:"PSI600", PSI604:"PSI601", PSI605:"PSI602",
-  PSI700:"PSI450", PSI701:"PSI452", PSI702:"CSO451",
-  PSI703:"PSI700", PSI704:"PSI701", PSI705:"PSI702",
-  DEP13:"DEP012", INF152:"INF151",
-  ANT201:"ANT150", ANT301:"ANT150", ANT302:"ANT150",
-  ANT304:"CSO300", CSA202:"PSI353", CSA203:"CSO250",
-  CSA301:"CSO150", EPS203:"CSO300",
-  PSI552:"PSI353", PSI553:"PSI353", PSI554:"BIO250",
-  PSI555:"PSI353", PSI556:"PSI354",
-  PSI557:"PSI400", PSI558:"CSO401",
-  PSI559:"PSI400", PSI560:"PSI400", PSI561:"PSI400",
-  PSI562:"PSI202",
-  PSI563:"PSI400", PSI564:"PSI400", PSI565:"PSI402",
-  PSI566:"PSI313", PSI567:"CSO250",
-  PSI568:"PSI402", PSI569:"BIO100",
-  SCA204:"CSO150", SCA205:"CSO200",
-  SUI201:"CSO200", SUI302:"CSO201",
+  ANT150: "ANT100", BIO150: "BIO100", CSO150: "CSO101",
+  EST152: "EST121", FIL150: "FIL101", PSI150: "PSI101",
+  BIO200: "BIO150", CSO200: "CSO150", CSO201: "ANT150",
+  INV200: "EST152, FIL150", PSI200: "PSI150",
+  PSI202: "PSI150", PSI203: "PSI150",
+  BIO250: "BIO200", CSO250: "CSO200", INV250: "INV200",
+  PSI254: "PSI200", PSI255: "PSI200",
+  PSI256: "PSI202, PSI203",
+  PSI313: "PSI254, BIO250",
+  CSO350: "CSO300", INV350: "INV300",
+  PSI350: "PSI310", PSI351: "PSI311", PSI352: "PSI312",
+  PSI353: "PSI256, PSI310", PSI354: "PSI313",
+  CSO401: "CSO201, CSO350", INV400: "INV350",
+  PSI400: "PSI350, PSI354", PSI401: "PSI351, PSI353",
+  PSI402: "PSI352",
+  CSO450: "CSO400", CSO451: "CSO401",
+  INV450: "INV400",
+  PSI450: "PSI400", PSI451: "PSI401", PSI452: "PSI402",
+  DEP500: "PSI451", DEP501: "DEP500",
+  CSO452: "CSO451", CSO453: "CSO451", CSO454: "CSO451",
+  CSO455: "CSO452", CSO456: "CSO453", CSO457: "CSO454",
+  PSI500: "PSI450", PSI501: "PSI452", PSI502: "CSO451",
+  PSI503: "PSI500", PSI504: "PSI501", PSI505: "PSI502",
+  PSI600: "PSI450", PSI601: "PSI452", PSI602: "CSO451",
+  PSI603: "PSI600", PSI604: "PSI601", PSI605: "PSI602",
+  PSI700: "PSI450", PSI701: "PSI452", PSI702: "CSO451",
+  PSI703: "PSI700", PSI704: "PSI701", PSI705: "PSI702",
+  DEP13: "DEP012", INF152: "INF151",
+  ANT201: "ANT150", ANT301: "ANT150", ANT302: "ANT150",
+  ANT304: "CSO300", CSA202: "PSI353", CSA203: "CSO250",
+  CSA301: "CSO150", EPS203: "CSO300",
+  PSI552: "PSI353", PSI553: "PSI353", PSI554: "BIO250",
+  PSI555: "PSI353", PSI556: "PSI354",
+  PSI557: "PSI400", PSI558: "CSO401",
+  PSI559: "PSI400", PSI560: "PSI400", PSI561: "PSI400",
+  PSI562: "PSI202",
+  PSI563: "PSI400", PSI564: "PSI400", PSI565: "PSI402",
+  PSI566: "PSI313", PSI567: "CSO250",
+  PSI568: "PSI402", PSI569: "BIO100",
+  SCA204: "CSO150", SCA205: "CSO200",
+  SUI201: "CSO200", SUI302: "CSO201",
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -1773,43 +1779,43 @@ const PREREQ_148_1 = {
 // Fuente: prerrequisitos148-2.xlsx
 // ─────────────────────────────────────────────────────────────
 const PREREQ_148_2 = {
-  "PSI 212":"PSI 105", "BIO 242":"BIO 141",
-  "CSO 222":"CSO 121", "PSI 213":"PSI 105",
-  "FIL 262":"FIL 161", "INV 232":"INV 131",
-  "PSI 311":"PSI 213", "PSI 314":"PSI 212",
-  "PSI 315":"PSI 212", "PSI 316":"PSI 212",
-  "BIO 343":"BIO 242", "EST 351":"INV 232",
-  "PSI 416":"PSI 311", "PSI 412":"PSI 311, PSI 314",
-  "PSI 414":"PSI 316", "PSI 413":"PSI 315",
-  "BIO 444":"BIO 343", "CSO 425":"CSO 222",
-  "EST 452":"EST 351",
-  "BIO 523":"BIO 444",
-  "PSI 517":"PSI 412", "PSI 518":"PSI 413",
-  "PSI 515":"BIO 444",
-  "CSO 524":"CSO 425", "CSO 525":"ANT 181, CSO 425",
-  "PSI 611":"PSI 515", "PSI 612":"PSI 518, PSI 414",
-  "PSI 614":"CSO 525", "PSI 619":"PSI 515",
-  "PSI 634":"CSO 525", "INV 633":"EST 452, FIL 262",
-  "PSI 711":"PSI 611, PSI 619", "PSI 712":"PSI 611",
-  "PSI 719":"PSI 614", "PSI 714":"CSO 524",
-  "CSO 726":"PSI 634", "INV 734":"INV 633",
-  "PSI 816":"PSI 517", "PSI 815":"PSI 612",
-  "PSI 817":"PSI 712", "PSI 813":"PSI 719",
-  "PSI 811":"PSI 714",
-  "CSO 827":"CSO 726", "INV 835":"INV 734",
-  "PSI 912":"PSI 816", "PSI 918":"PSI 815",
-  "PSI 913":"PSI 817", "PSI 914":"PSI 816",
-  "INV 936":"INV 835", "INV 915":"INV 835",
-  "PSI 916":"PSI 611",
-  "PPP 100":"8vo sem. concluido",
-  "GRL 001":"9no sem. concluido",
-  "GDI 001":"9no sem. concluido",
-  "OPT 001":"PSI 611", "OPT 002":"ANT 181",
-  "OPT 003":"BIO 444", "OPT 004":"CSO 121",
-  "OPT 005":"INV 232", "OPT 006":"CSO 524",
-  "OPT 007":"OPT 006", "OPT 008":"PSI 611",
-  "OPT 009":"CSO 222", "OPT 010":"PSI 611",
-  "OPT 011":"PSI 816",
+  "PSI 212": "PSI 105", "BIO 242": "BIO 141",
+  "CSO 222": "CSO 121", "PSI 213": "PSI 105",
+  "FIL 262": "FIL 161", "INV 232": "INV 131",
+  "PSI 311": "PSI 213", "PSI 314": "PSI 212",
+  "PSI 315": "PSI 212", "PSI 316": "PSI 212",
+  "BIO 343": "BIO 242", "EST 351": "INV 232",
+  "PSI 416": "PSI 311", "PSI 412": "PSI 311, PSI 314",
+  "PSI 414": "PSI 316", "PSI 413": "PSI 315",
+  "BIO 444": "BIO 343", "CSO 425": "CSO 222",
+  "EST 452": "EST 351",
+  "BIO 523": "BIO 444",
+  "PSI 517": "PSI 412", "PSI 518": "PSI 413",
+  "PSI 515": "BIO 444",
+  "CSO 524": "CSO 425", "CSO 525": "ANT 181, CSO 425",
+  "PSI 611": "PSI 515", "PSI 612": "PSI 518, PSI 414",
+  "PSI 614": "CSO 525", "PSI 619": "PSI 515",
+  "PSI 634": "CSO 525", "INV 633": "EST 452, FIL 262",
+  "PSI 711": "PSI 611, PSI 619", "PSI 712": "PSI 611",
+  "PSI 719": "PSI 614", "PSI 714": "CSO 524",
+  "CSO 726": "PSI 634", "INV 734": "INV 633",
+  "PSI 816": "PSI 517", "PSI 815": "PSI 612",
+  "PSI 817": "PSI 712", "PSI 813": "PSI 719",
+  "PSI 811": "PSI 714",
+  "CSO 827": "CSO 726", "INV 835": "INV 734",
+  "PSI 912": "PSI 816", "PSI 918": "PSI 815",
+  "PSI 913": "PSI 817", "PSI 914": "PSI 816",
+  "INV 936": "INV 835", "INV 915": "INV 835",
+  "PSI 916": "PSI 611",
+  "PPP 100": "8vo sem. concluido",
+  "GRL 001": "9no sem. concluido",
+  "GDI 001": "9no sem. concluido",
+  "OPT 001": "PSI 611", "OPT 002": "ANT 181",
+  "OPT 003": "BIO 444", "OPT 004": "CSO 121",
+  "OPT 005": "INV 232", "OPT 006": "CSO 524",
+  "OPT 007": "OPT 006", "OPT 008": "PSI 611",
+  "OPT 009": "CSO 222", "OPT 010": "PSI 611",
+  "OPT 011": "PSI 816",
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -1964,8 +1970,8 @@ let sugSeleccion = {};
 let sugEstActual = null;
 let sugPoolCache = [];
 
-const SEM_NAMES_SUG = ["","Primer","Segundo","Tercer","Cuarto",
-                        "Quinto","Sexto","Séptimo","Octavo","Noveno","Décimo"];
+const SEM_NAMES_SUG = ["", "Primer", "Segundo", "Tercer", "Cuarto",
+  "Quinto", "Sexto", "Séptimo", "Octavo", "Noveno", "Décimo"];
 
 function inicializarSeleccion(est, pool) {
   const id = est.id || est.Registro;
@@ -1981,13 +1987,13 @@ function inicializarSeleccion(est, pool) {
     g2Saved.forEach(sigla => { sugSeleccion[sigla] = 'g2'; });
   } else {
     // Auto-sugerencia por defecto
-    pool.slice(0, 7).forEach(m  => { sugSeleccion[m.sigla] = 'g1'; });
+    pool.slice(0, 7).forEach(m => { sugSeleccion[m.sigla] = 'g1'; });
     pool.slice(7, 14).forEach(m => { sugSeleccion[m.sigla] = 'g2'; });
   }
 }
 
 /* Clic en card pendiente: cicla none → g1 → g2 → none */
-window.sugCiclar = function(sigla) {
+window.sugCiclar = function (sigla) {
   const actual = sugSeleccion[sigla] || null;
   if (actual === null) {
     const cG1 = Object.values(sugSeleccion).filter(v => v === 'g1').length;
@@ -2009,13 +2015,13 @@ window.sugCiclar = function(sigla) {
 };
 
 /* Quitar materia de una gestión (desde panel inferior) */
-window.sugQuitar = function(sigla) {
+window.sugQuitar = function (sigla) {
   sugSeleccion[sigla] = null;
   actualizarModalMalla();
 };
 
 /* Abre el modal grande con la malla */
-window.abrirModalMalla = function() {
+window.abrirModalMalla = function () {
   const est = estudianteActual;
   if (!est) return;
   const { pool } = getSugerencias(est);
@@ -2035,13 +2041,13 @@ window.abrirModalMalla = function() {
 };
 
 /* Guardar selección en Supabase y cerrar */
-window.guardarModalMalla = async function() {
+window.guardarModalMalla = async function () {
   const est = estudianteActual;
   if (!est) return;
 
   // Construir arrays de siglas
-  const g1 = Object.entries(sugSeleccion).filter(([,v]) => v === 'g1').map(([s]) => s);
-  const g2 = Object.entries(sugSeleccion).filter(([,v]) => v === 'g2').map(([s]) => s);
+  const g1 = Object.entries(sugSeleccion).filter(([, v]) => v === 'g1').map(([s]) => s);
+  const g2 = Object.entries(sugSeleccion).filter(([, v]) => v === 'g2').map(([s]) => s);
 
   // Feedback: deshabilitar botón
   const btn = document.querySelector('.mm-btn-save');
@@ -2094,7 +2100,7 @@ function mostrarToast(msg, tipo) {
 }
 
 /* ── Imprimir Hoja de Ruta en PDF ──────────────────────────── */
-window.imprimirHojaRuta = function() {
+window.imprimirHojaRuta = function () {
   const est = estudianteActual;
   if (!est) return;
 
@@ -2161,15 +2167,15 @@ window.imprimirHojaRuta = function() {
   });
 
   // Tablas de selección G1/G2
-  const selG1 = Object.entries(sugSeleccion).filter(([,v]) => v === 'g1').map(([s]) => s);
-  const selG2 = Object.entries(sugSeleccion).filter(([,v]) => v === 'g2').map(([s]) => s);
+  const selG1 = Object.entries(sugSeleccion).filter(([, v]) => v === 'g1').map(([s]) => s);
+  const selG2 = Object.entries(sugSeleccion).filter(([, v]) => v === 'g2').map(([s]) => s);
   const siglaToNombre = {};
   sugPoolCache.forEach(m => { siglaToNombre[m.sigla] = m.nombre; });
 
   function tablaImpresion(titulo, lista, colorBg) {
     let filas = lista.map((sigla, i) => {
       const nombre = siglaToNombre[sigla] || sigla;
-      return `<tr><td style="text-align:center;width:25px">${i+1}</td><td style="font-weight:700;width:70px">${sigla}</td><td>${nombre}</td></tr>`;
+      return `<tr><td style="text-align:center;width:25px">${i + 1}</td><td style="font-weight:700;width:70px">${sigla}</td><td>${nombre}</td></tr>`;
     }).join('');
     if (!lista.length) filas = '<tr><td colspan="3" style="text-align:center;color:#9ca3af;font-style:italic">Sin materias asignadas</td></tr>';
     return `<div style="flex:1;min-width:250px">
@@ -2252,7 +2258,7 @@ window.imprimirHojaRuta = function() {
   win.onload = () => { win.print(); };
 };
 
-window.cerrarModalMalla = function() {
+window.cerrarModalMalla = function () {
   const overlay = document.getElementById('modalMallaOverlay');
   if (overlay) overlay.style.display = 'none';
   document.body.style.overflow = '';
@@ -2437,21 +2443,21 @@ function actualizarModalMalla() {
   }
 
   // Panel inferior: materias seleccionadas como tablas
-  const selG1 = Object.entries(sugSeleccion).filter(([,v]) => v === 'g1').map(([s]) => s);
-  const selG2 = Object.entries(sugSeleccion).filter(([,v]) => v === 'g2').map(([s]) => s);
+  const selG1 = Object.entries(sugSeleccion).filter(([, v]) => v === 'g1').map(([s]) => s);
+  const selG2 = Object.entries(sugSeleccion).filter(([, v]) => v === 'g2').map(([s]) => s);
 
   function tablaGestion(lista, gest, titulo, cnt) {
     const colorCls = gest === 'g1' ? 'mm-tbl-g1' : 'mm-tbl-g2';
     const filas = lista.length
       ? lista.map((sigla, i) => {
-          const nombre = siglaToNombre[sigla] || sigla;
-          return `<tr>
+        const nombre = siglaToNombre[sigla] || sigla;
+        return `<tr>
             <td class="mm-tbl-num">${i + 1}</td>
             <td class="mm-tbl-sigla">${sigla}</td>
             <td class="mm-tbl-nombre">${nombre}</td>
             <td class="mm-tbl-action"><i class="fa-solid fa-xmark mm-tbl-remove" onclick="event.stopPropagation();sugQuitar('${sigla}')" title="Quitar"></i></td>
           </tr>`;
-        }).join('')
+      }).join('')
       : `<tr><td colspan="4" class="mm-tbl-empty">Sin materias asignadas</td></tr>`;
     return `<div class="mm-panel-col ${colorCls}">
       <div class="mm-panel-title"><i class="fa-solid fa-calendar-days"></i> ${titulo} <span class="mm-panel-cnt">${cnt}/7</span></div>
@@ -2513,7 +2519,7 @@ function actualizarModalMalla() {
 function renderSugerencias(est) {
   const container = document.getElementById("contentSug");
   const { plan, maxSemNum, totalAprobadas, gestion1: autoG1,
-          gestion2: autoG2, pool } = getSugerencias(est);
+    gestion2: autoG2, pool } = getSugerencias(est);
 
   inicializarSeleccion(est, pool);
 
@@ -2581,8 +2587,8 @@ function renderSugerencias(est) {
         ${colGestion("Gestión 2/2026", "sug-head-g2", useG2)}
       </div>
       ${useG1.length + useG2.length === 0
-        ? '<div class="sug-notice sug-notice-ok">🎉 ¡Sin materias pendientes!</div>'
-        : ''}
+      ? '<div class="sug-notice sug-notice-ok">🎉 ¡Sin materias pendientes!</div>'
+      : ''}
     </div>`;
 }
 
