@@ -732,13 +732,6 @@ body {
   font-weight: 700;
 }
 
-.mat-nota-nueva {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: #1e3a8a;
-  margin-bottom: 0.25rem;
-}
-
 .conv-tag {
   display: inline-block;
   margin-top: 0.25rem;
@@ -776,13 +769,9 @@ body {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 0.15rem 0.4rem;
-  font-size: 0.65rem;
-  color: var(--text-2);
-  display: block;
-  width: 100%;
-  white-space: normal;
-  line-height: 1.2;
+  padding: 0.06rem 0.28rem;
+  font-size: 0.62rem;
+  color: var(--text-3);
 }
 
 /* ── Tabla de Convalidaciones ───────────────────────────── */
@@ -1967,162 +1956,6 @@ body {
 
   .mm-bottom-panel {
     flex-direction: column;
-  }
-}
-
-/* ── Información de convalidación en tarjeta ──────────────── */
-.mat-conv-info {
-  margin-top: 0.35rem;
-  padding-top: 0.25rem;
-  border-top: 1px dashed rgba(0, 0, 0, 0.1);
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-}
-
-.conv-label {
-  font-size: 0.55rem;
-  text-transform: uppercase;
-  color: var(--text-3);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.conv-sigla {
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: var(--accent);
-}
-
-/* ── Estilos de Impresión (PDF) ─────────────────────────── */
-@media print {
-  @page {
-    size: landscape;
-    margin: 5mm;
-  }
-
-  /* Ocultar elementos no deseados */
-  .header,
-  .sidebar,
-  .tabs,
-  .leyenda,
-  .search-wrap,
-  .edit-controls,
-  .btn-action,
-  .btn-edit-subjects {
-    display: none !important;
-  }
-
-  /* Ajustar layout para impresión */
-  .layout {
-    display: block !important;
-    height: auto !important;
-    overflow: visible !important;
-  }
-
-  .detail-panel {
-    padding: 0 !important;
-    overflow: visible !important;
-    max-width: 100% !important;
-  }
-
-  .student-header {
-    box-shadow: none !important;
-    border: 1px solid #eee !important;
-    margin-bottom: 1rem !important;
-    padding: 0.5rem !important;
-  }
-
-  .print-only-title {
-    display: block !important;
-  }
-
-  /* Forzar visibilidad de la malla */
-  .tab-content {
-    /* No forzar display: block !important para permitir que JS controle cuál pestaña se ve */
-    opacity: 1 !important;
-  }
-
-  .malla-wrap {
-    gap: 1rem !important;
-  }
-
-  .malla-horizontal {
-    display: grid !important;
-    grid-template-columns: repeat(10, 1fr) !important;
-    /* 10 columnas exactas como en pantalla */
-    gap: 5px !important;
-    overflow: visible !important;
-    width: 100% !important;
-  }
-
-  .sem-col {
-    break-inside: avoid;
-    page-break-inside: avoid;
-    min-width: 0 !important;
-    /* Permitir que se encojan para caber */
-    border: 1px solid #ddd !important;
-  }
-
-  .sem-col-header {
-    padding: 0.3rem !important;
-  }
-
-  .mat-card {
-    break-inside: avoid;
-    page-break-inside: avoid;
-    border: 1px solid #ccc !important;
-    background: #fff !important;
-    padding: 0.3rem !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  .mat-sigla,
-  .mat-nombre {
-    font-size: 0.6rem !important;
-  }
-
-  /* Asegurar que los colores de fondo se impriman */
-  .mat-aprobada {
-    background-color: #dcfce7 !important;
-  }
-
-  .mat-reprobada {
-    background-color: #fee2e2 !important;
-  }
-
-  .mat-pendiente {
-    background-color: #f8fafc !important;
-  }
-
-  .mat-homolog {
-    background-color: #ecfeff !important;
-  }
-
-  .mat-convalid {
-    background-color: #fef3c7 !important;
-  }
-
-  .mat-compens {
-    background-color: #f3e8ff !important;
-  }
-
-  .mat-card.edit-selected {
-    background-color: #eff6ff !important;
-    border: 2px solid #1e3a8a !important;
-  }
-
-  /* Ocultar etiquetas de nota en impresión si estamos en modo edición */
-  body.modo-edicion .mat-reprobada-tag,
-  body.modo-edicion .mat-nota-nueva {
-    display: none !important;
-  }
-
-  .text-1,
-  .text-2,
-  .text-3 {
-    color: #000 !important;
   }
 }
 
