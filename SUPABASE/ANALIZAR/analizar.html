@@ -116,6 +116,63 @@
             background: #f1f5f9;
             color: #475569;
         }
+
+        /* Título para impresión */
+        .print-only-title {
+            display: none;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #1e3a8a;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            border-bottom: 2px solid #1e3a8a;
+            padding-bottom: 0.5rem;
+        }
+
+        /* Contadores de Materias */
+        .det-counters {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .counter-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #f8fafc;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .counter-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .counter-value {
+            font-size: 1rem;
+            font-weight: 800;
+        }
+
+        .value-troncales {
+            color: #1e3a8a;
+        }
+
+        .value-electivas {
+            color: #0f766e;
+        }
+
+        .value-talleres {
+            color: #334155;
+        }
     </style>
 </head>
 
@@ -187,6 +244,7 @@
             </div>
 
             <!-- Detalle del estudiante -->
+            <h1 id="printTitle" class="print-only-title"></h1>
             <div id="studentDetail" style="display:none">
 
                 <!-- Cabecera del estudiante -->
@@ -204,6 +262,22 @@
                             <span id="detVenc" class="meta-badge">
                                 <i class="fa-solid fa-triangle-exclamation"></i>
                             </span>
+                        </div>
+
+                        <!-- Contadores de Materias -->
+                        <div class="det-counters">
+                            <div class="counter-item">
+                                <span class="counter-label">Troncales:</span>
+                                <span id="countTroncales" class="counter-value value-troncales">0</span>
+                            </div>
+                            <div class="counter-item">
+                                <span class="counter-label">Electivas:</span>
+                                <span id="countElectivas" class="counter-value value-electivas">0</span>
+                            </div>
+                            <div class="counter-item">
+                                <span class="counter-label">Talleres:</span>
+                                <span id="countTalleres" class="counter-value value-talleres">0</span>
+                            </div>
                         </div>
 
                         <!-- Botón Editar -->
@@ -256,7 +330,7 @@
                 <!-- Leyenda -->
                 <div class="leyenda">
                     <span class="ley-item"><span class="ley-dot ley-aprobada"></span>Aprobada</span>
-                    <span class="ley-item"><span class="ley-dot ley-reprobada"></span>Reprobada</span>
+                    <!-- <span class="ley-item"><span class="ley-dot ley-reprobada"></span>Reprobada</span> -->
                     <span class="ley-item"><span class="ley-dot ley-pendiente"></span>Pendiente</span>
                     <span class="ley-item"><span class="ley-dot ley-pendiente-critico"></span>Pendiente crítico (nueva
                         malla)</span>
