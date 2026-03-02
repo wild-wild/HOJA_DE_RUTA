@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hoja de Ruta – Análisis de Estudiantes</title>
+    <meta name="description" content="Sistema de análisis de avance académico con malla antigua y nueva del Plan 148" />
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <script>
+        // Verificación de sesión Psiconet
+        (function () {
+            const session = localStorage.getItem('psiconet_session');
+            if (!session) {
+                window.location.href = '../../index.html'; // Redirigir al login
+                return;
+            }
+            try {
+                const data = JSON.parse(session);
+                const now = new Date().getTime();
+                if (now - data.timestamp > 24 * 60 * 60 * 1000) { // Expirar en 24h
+                    localStorage.removeItem('psiconet_session');
+                    window.location.href = '../../index.html';
+                }
+            } catch (e) {
+                window.location.href = '../../index.html';
+            }
+        })();
+    </script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+    <!-- Estilos personalizados (mallas, tarjetas, etc.) -->
+    <link rel="stylesheet" href="estilos.css" />
+    <style>
+        .detail-panel {
+            max-width: 100% !important;
+            flex: 1;
+        }
+
+        .student-header {
+            max-width: 1400px;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        /* Estilos para el modo edición */
+        .edit-controls {
+            display: none;
+            gap: 10px;
+            margin-top: 1rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        body.modo-edicion .edit-controls {
+            display: flex;
+        }
+
+        body.modo-edicion .btn-edit-main {
+            display: none;
+        }
+
+        .mat-card.editable {
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .mat-card.editable:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .mat-card.edit-selected {
+            border: 2px solid #1e3a8a !important;
+            background: #eff6ff !important;
+        }
+
+        .mat-card.edit-selected::after {
+            content: "\f058";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            color: #1e3a8a;
+            font-size: 0.8rem;
+        }
+
+        .btn-action {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn-save {
+            background: #1e3a8a;
+            color: white;
+        }
+
+        .btn-cancel {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        /* Título para impresión */
+        .print-only-title {
+            display: none;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #1e3a8a;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            border-bottom: 2px solid #1e3a8a;
+            padding-bottom: 0.5rem;
+        }
+
+        /* Contadores de Materias */
+        .det-counters {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .counter-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #f8fafc;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .counter-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+
+        .counter-value {
+            font-size: 1rem;
+            font-weight: 800;
+        }
+
+        .value-troncales {
+            color: #1e3a8a;
+        }
+
+        .value-electivas {
+            color: #0f766e;
+        }
+
+        .value-talleres {
+            color: #334155;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- =========== HEADER =========== -->
+    <header class="header">
+        <div class="header-inner">
+            <div class="header-brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <div>
+                    <h1 class="brand-title">Hoja de Ruta Académica</h1>
+                    <p class="brand-sub">Plan 148 &middot; Carrera de Psicología</p>
+                </div>
+            </div>
+            <div class="header-stats" id="headerStats">
+                <div class="stat-chip" id="statTotal">
+                    <span class="stat-num">–</span>
+                    <span class="stat-label">estudiantes</span>
+                </div>
+                <!-- Navegación -->
+                <a href="../../a_d_m_i_n.html" class="tab active"
+                    style="padding: 5px 15px; border-radius: 20px; font-size: 13px; text-decoration: none;">
+                    <i class="fa-solid fa-arrow-left"></i> Volver
+                </a>
+                <button onclick="logout()" class="tab"
+                    style="padding: 5px 15px; border-radius: 20px; font-size: 13px; background: rgba(239, 68, 68, 0.1); color: #ef4444;">
+                    <i class="fa-solid fa-right-from-bracket"></i> Salir
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- =========== MAIN LAYOUT =========== -->
+    <div class="layout">
+
+        <!-- ===== PANEL IZQUIERDO: lista ===== -->
+        <aside class="sidebar">
+            <div class="search-wrap">
+                <div class="search-input-wrap">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" id="searchInput" class="search-input" placeholder="Buscar por nombre o registro…"
+                        autocomplete="off" />
+                </div>
+                <div id="searchCount" class="search-count"></div>
+            </div>
+
+            <div id="loadingMsg" class="loading-msg">
+                <div class="spinner"></div>
+                <span>Cargando estudiantes…</span>
+            </div>
+            <div id="errorMsg" class="error-msg" style="display:none"></div>
+
+            <ul id="studentList" class="student-list" role="list"></ul>
+        </aside>
+
+        <!-- ===== PANEL DERECHO: detalle ===== -->
+        <main class="detail-panel" id="detailPanel">
+
+            <!-- Placeholder cuando no hay selección -->
+            <div class="placeholder" id="placeholder">
+                <div class="placeholder-icon">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                </div>
+                <h2>Selecciona un estudiante</h2>
+                <p>Haz clic en un nombre de la lista para ver su hoja de ruta con la malla antigua y la malla nueva.</p>
+            </div>
+
+            <!-- Detalle del estudiante -->
+            <h1 id="printTitle" class="print-only-title"></h1>
+            <div id="studentDetail" style="display:none">
+
+                <!-- Cabecera del estudiante -->
+                <div class="student-header">
+                    <div class="student-avatar" id="detAvatar"></div>
+                    <div class="student-info">
+                        <h2 id="detNombre" class="det-nombre"></h2>
+                        <div class="det-meta">
+                            <span id="detRegistro" class="meta-badge">
+                                <i class="fa-solid fa-id-card"></i>
+                            </span>
+                            <span id="detIngreso" class="meta-badge">
+                                <i class="fa-solid fa-calendar"></i>
+                            </span>
+                            <span id="detVenc" class="meta-badge">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            </span>
+                        </div>
+
+                        <!-- Contadores de Materias -->
+                        <div class="det-counters">
+                            <div class="counter-item">
+                                <span class="counter-label">Troncales:</span>
+                                <span id="countTroncales" class="counter-value value-troncales">0</span>
+                            </div>
+                            <div class="counter-item">
+                                <span class="counter-label">Electivas:</span>
+                                <span id="countElectivas" class="counter-value value-electivas">0</span>
+                            </div>
+                            <div class="counter-item">
+                                <span class="counter-label">Talleres:</span>
+                                <span id="countTalleres" class="counter-value value-talleres">0</span>
+                            </div>
+                        </div>
+
+                        <!-- Botón Editar -->
+                        <button onclick="activarModoEdicion()"
+                            class="btn-action btn-edit-main mt-4 border border-blue-200 text-blue-800 hover:bg-blue-50">
+                            <i class="fa-solid fa-user-pen"></i> Editar Materias
+                        </button>
+
+                        <!-- Controles de Edición -->
+                        <div class="edit-controls">
+                            <button onclick="guardarCambiosEdicion()" class="btn-action btn-save">
+                                <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
+                            </button>
+                            <button onclick="desactivarModoEdicion()" class="btn-action btn-cancel">
+                                <i class="fa-solid fa-xmark"></i> Cancelar
+                            </button>
+                            <span class="text-xs text-blue-600 font-medium flex items-center italic">
+                                <i class="fa-solid fa-circle-info mr-1"></i> Haz clic en las materias para marcarlas
+                            </span>
+                        </div>
+                    </div>
+                    <div class="det-progress">
+                        <svg class="progress-ring" viewBox="0 0 80 80">
+                            <circle class="ring-bg" cx="40" cy="40" r="32" />
+                            <circle class="ring-fill" id="ringFill" cx="40" cy="40" r="32" />
+                        </svg>
+                        <div class="progress-label">
+                            <span id="detPct" class="pct-num">0%</span>
+                            <span class="pct-sub">avance</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="tabs">
+                    <button class="tab active" id="tabAntigua" onclick="mostrarTab('antigua')">
+                        <i class="fa-solid fa-book"></i> Malla Antigua (Plan 148-1)
+                    </button>
+                    <button class="tab" id="tabNueva" onclick="mostrarTab('nueva')">
+                        <i class="fa-solid fa-book-open"></i> Malla Nueva (Plan 148-2)
+                    </button>
+                    <button class="tab" id="tabConv" onclick="mostrarTab('conv')">
+                        <i class="fa-solid fa-right-left"></i> Tabla de Convalidaciones
+                    </button>
+                    <button class="tab tab-sug" id="tabSug" onclick="mostrarTab('sug')">
+                        <i class="fa-solid fa-lightbulb"></i> Sugerencias 1/2026 &middot; 2/2026
+                    </button>
+                </div>
+
+                <!-- Leyenda -->
+                <div class="leyenda">
+                    <span class="ley-item"><span class="ley-dot ley-aprobada"></span>Aprobada</span>
+                    <!-- <span class="ley-item"><span class="ley-dot ley-reprobada"></span>Reprobada</span> -->
+                    <span class="ley-item"><span class="ley-dot ley-pendiente"></span>Pendiente</span>
+                    <span class="ley-item"><span class="ley-dot ley-pendiente-critico"></span>Pendiente crítico (nueva
+                        malla)</span>
+                    <span class="ley-item"><span class="ley-dot ley-eliminada"></span>Eliminada del plan</span>
+                    <span class="ley-item"><span class="ley-dot ley-homolog"></span>Homologación</span>
+                    <span class="ley-item"><span class="ley-dot ley-convalid"></span>Convalidación</span>
+                    <span class="ley-item"><span class="ley-dot ley-compens"></span>Compensación</span>
+                </div>
+
+                <!-- Contenido de tabs -->
+                <div id="contentAntigua" class="tab-content"></div>
+                <div id="contentNueva" class="tab-content" style="display:none"></div>
+                <div id="contentConv" class="tab-content" style="display:none"></div>
+                <div id="contentSug" class="tab-content" style="display:none"></div>
+
+            </div><!-- /studentDetail -->
+        </main>
+    </div><!-- /layout -->
+
+    <script>
+        function logout() {
+            localStorage.removeItem('psiconet_session');
+            window.location.href = '../../index.html';
+        }
+    </script>
+    <script type="module" src="app.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,5 @@
+﻿1321: if (tab === "sug") renderSugerencias(estudianteActual);
+1958: // 15. RENDER SUGERENCIAS  (modo vista + modo edición)
+1989: renderSugerencias(estudianteActual);
+1995: renderSugerencias(estudianteActual);
+1998: function renderSugerencias(est) {
