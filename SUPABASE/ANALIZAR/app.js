@@ -1307,6 +1307,28 @@ function seleccionarEstudiante(est) {
   ring.style.strokeDasharray = circ;
   ring.style.strokeDashoffset = circ - (pct / 100) * circ;
 
+  // Actualizar contadores (Troncales, Electivas, Talleres)
+  let troncales = 0, electivas = 0, talleres = 0;
+  CONVALIDACIONES.forEach(c => {
+    const sigla = c[0];
+    const sem = c[2];
+    const nota = est[sigla];
+    const aprobada = nota != null && !isNaN(Number(nota)) && Number(nota) >= 51;
+
+    if (aprobada) {
+      if (sem === "ELECTIVA") electivas++;
+      else if (sem === "TALLER") talleres++;
+      else if (sem !== "PRÁCTICAS" && sem !== "TRABAJO DE GRADO") troncales++;
+    }
+  });
+
+  const elTron = document.getElementById("countTroncales");
+  const elElec = document.getElementById("countElectivas");
+  const elTall = document.getElementById("countTalleres");
+  if (elTron) elTron.textContent = troncales;
+  if (elElec) elElec.textContent = electivas;
+  if (elTall) elTall.textContent = talleres;
+
   mostrarTab(tabActual);
 }
 
@@ -1448,6 +1470,16 @@ window.mostrarTab = function (tab) {
     if (btn) btn.classList.toggle("active", t === tab);
   });
   if (!estudianteActual) return;
+
+  // Actualizar título de impresión dinámico
+  const pTitle = document.getElementById("printTitle");
+  if (pTitle) {
+    if (tab === "antigua") pTitle.textContent = "AVANCE EN MALLA ANTIGUA (PLAN 148-1)";
+    else if (tab === "nueva") pTitle.textContent = "AVANCE EN MALLA NUEVA (PLAN 148-2)";
+    else if (tab === "conv") pTitle.textContent = "TABLA DE CONVALIDACIONES";
+    else if (tab === "sug") pTitle.textContent = "SUGERENCIAS DE INSCRIPCIÓN";
+  }
+
   if (tab === "antigua") renderMallaAntigua(estudianteActual);
   if (tab === "nueva") renderMallaNueva(estudianteActual);
   if (tab === "conv") renderTablaConv(estudianteActual);
@@ -1495,8 +1527,21 @@ function tarjetaMateria(sigla, nombre, nota, tipo, mostrarConv = true, esCritica
   const convTag = tipo
     ? `<div class="conv-tag conv-${tipo.toLowerCase().split(" ")[0]}">${tipo}</div>`
     : "";
-  // Mostrar badge “REPROBADA” solo si tiene nota reprobatoria
-  const reprTag = (n !== null && n < 51 && tipo !== 'ELIMINADA')
+
+  // Información de convalidación (qué materia es en la nueva malla)
+  let convInfo = "";
+  if (mostrarConv) {
+    const c = CONV_BY_SIGLA[sigla];
+    if (c && c[3]) { // c[3] is siglaNueva
+      convInfo = `<div class="mat-conv-info">
+        <span class="conv-label">convalida con:</span>
+        <span class="conv-sigla">${c[3]}</span>
+      </div>`;
+    }
+  }
+
+  // Mostrar badge “REPROBADA” solo si tiene nota reprobatoria (y no estamos en modo edición)
+  const reprTag = (n !== null && n < 51 && tipo !== 'ELIMINADA' && !modoEdicion)
     ? `<div class="mat-reprobada-tag"><i class="fa-solid fa-circle-xmark"></i> ${n}</div>` : '';
   // Prerrequisito de malla antigua
   const req = PREREQ_148_1[sigla];
@@ -1504,7 +1549,7 @@ function tarjetaMateria(sigla, nombre, nota, tipo, mostrarConv = true, esCritica
   return `<div class="${cls}">
     <div class="mat-sigla">${sigla}</div>
     <div class="mat-nombre">${nombre}</div>
-    ${reprTag}${reqTag}${convTag}
+    ${reprTag}${reqTag}${convTag}${convInfo}
   </div>`;
 }
 
@@ -1562,7 +1607,7 @@ function renderMallaAntigua(est) {
         <div class="sem-col-header" style="background:${sec.color}20;border-color:${sec.color}60;color:${sec.color}">
           <span class="sem-num">${sec.label}</span>
           <span class="sem-full-name">${sec.key}</span>
-          <span class="sem-count" id="count-${sec.key}">0/${mats.length}</span>
+         
         </div>
         <div class="sem-col-body">
           ${mats.map((m) => {
@@ -1650,14 +1695,12 @@ function buildCardNueva(it) {
   const tipoCls = `tipo-badge tipo-${it.tipo.split(" ")[0].toLowerCase()}`;
   const tipoBadge = `<span class="${tipoCls}">${it.tipo}</span>`;
 
-  // Chips de origen: sigla + nombre abreviado
+  // Chips de origen: Nombre - Sigla
   const origChips = it.origs
     .map((o) => {
-      const nombre = o.nombreAnt
-        ? o.nombreAnt.replace(/(.{20})..+/, "$1…")
-        : o.siglaAnt;
-      return `<span class="orig-chip" title="${o.nombreAnt ?? o.siglaAnt}">
-          <b>${o.siglaAnt}</b> ${nombre}
+      const nombre = o.nombreAnt || "–";
+      return `<span class="orig-chip" title="${nombre} (${o.siglaAnt})">
+          ${nombre} - <b>${o.siglaAnt}</b>
         </span>`;
     })
     .join("");
@@ -1666,12 +1709,18 @@ function buildCardNueva(it) {
   const req = PREREQ_148_2[it.siglaNueva];
   const reqTag = req ? `<div class="mat-prereq"><i class="fa-solid fa-key"></i> ${req}</div>` : '';
 
+  // Etiqueta de nota (solo si no estamos en modo edición)
+  const finalNotaLabel = (!modoEdicion)
+    ? `<div class="mat-nota-nueva">${notaLabel}</div>`
+    : "";
+
   return `<div class="${cls}">
       <div class="nueva-header">
         <span class="mat-sigla-nueva">${it.siglaNueva}</span>
         ${tipoBadge}
       </div>
       <div class="mat-nombre">${it.nombreNueva}</div>
+      ${finalNotaLabel}
       ${reqTag}
       <div class="mat-origs-nueva">
         <span class="origs-label">antes:</span>
@@ -2231,150 +2280,253 @@ window.imprimirHojaRuta = function () {
 
   const { plan, totalAprobadas, maxSemNum, pool } = getSugerencias(est);
   const semActualStr = maxSemNum > 0 ? SEM_NAMES_SUG[maxSemNum] + ' Semestre' : '—';
+  const displayPlan = plan === "148-2" ? "Plan 148-2" : "Plan 148-1";
 
-  // Construir malla antigua para impresión
-  const byKey = {};
-  CONVALIDACIONES.forEach(r => {
-    const sigla = r[0], nombre = r[1], sem = r[2], tipo = r[6], orden = r[7];
-    if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla)) {
-      const nota = est[sigla];
-      const n = nota != null && nota !== '' && !isNaN(Number(nota)) ? Number(nota) : null;
-      if (n === null || n < 51) return;
-    }
-    if (!byKey[sem]) byKey[sem] = [];
-    byKey[sem].push({ sigla, nombre, tipo, orden });
-  });
-  Object.values(byKey).forEach(arr => arr.sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999)));
-
-  // Filas de malla
+  // Reutilizar lógica de agrupación para la malla en el PDF
   let mallaCols = '';
-  SECS_SEMESTRES.forEach(sec => {
-    const mats = byKey[sec.key] || [];
-    let matRows = '';
-    mats.forEach(m => {
-      const nota = est[m.sigla];
-      const n = nota != null && nota !== '' && !isNaN(Number(nota)) ? Number(nota) : null;
-      const aprobada = n !== null && n >= 51;
-      const reprobada = n !== null && n < 51;
-      const sel = sugSeleccion[m.sigla] || null;
 
-      let bg, borderCol, color, notaStr, badge = '';
-      if (aprobada) {
-        bg = '#dcfce7'; borderCol = '#16a34a'; color = '#15803d'; notaStr = '✓ ' + n;
-      } else if (reprobada) {
-        bg = '#fee2e2'; borderCol = '#dc2626'; color = '#dc2626'; notaStr = '✗ ' + n;
-      } else if (sel === 'g1') {
-        bg = '#dbeafe'; borderCol = '#1e3a8a'; color = '#1e3a8a'; notaStr = '';
-        badge = '<span style="background:#1e3a8a;color:#fff;font-size:5.5px;padding:0 3px;border-radius:2px;font-weight:800;margin-left:2px">G1</span>';
-      } else if (sel === 'g2') {
-        bg = '#ede9fe'; borderCol = '#6d28d9'; color = '#6d28d9'; notaStr = '';
-        badge = '<span style="background:#6d28d9;color:#fff;font-size:5.5px;padding:0 3px;border-radius:2px;font-weight:800;margin-left:2px">G2</span>';
-      } else if (m.tipo === 'ELIMINADA') {
-        bg = '#f3f4f6'; borderCol = '#d1d5db'; color = '#9ca3af'; notaStr = 'ELIM';
+  if (plan === '148-2') {
+    // ── PLAN 148-2: Malla Nueva (1-6) + Antigua (7-10) ────────
+    const SEMS_NUEVA = [
+      { key: "PRIMER SEMESTRE", label: "1° N", color: "#1d4ed8" },
+      { key: "SEGUNDO SEMESTRE", label: "2° N", color: "#1e40af" },
+      { key: "TERCER SEMESTRE", label: "3° N", color: "#1a56db" },
+      { key: "CUARTO SEMESTRE", label: "4° N", color: "#6d28d9" },
+      { key: "QUINTO SEMESTRE", label: "5° N", color: "#7c3aed" },
+      { key: "SEXTO SEMESTRE", label: "6° N", color: "#a21caf" }
+    ];
+    const SEMS_ANT_7PLUS = [
+      { key: "SÉPTIMO SEMESTRE", label: "7°", color: "#be185d" },
+      { key: "OCTAVO SEMESTRE", label: "8°", color: "#b91c1c" },
+      { key: "NOVENO SEMESTRE", label: "9°", color: "#92400e" },
+      { key: "DÉCIMO SEMESTRE", label: "10°", color: "#065f46" }
+    ];
+
+    const byNueva = {};
+    CONVALIDACIONES.forEach(conv => {
+      const [siglaAnt, , , siglaNueva, nombreNueva, semNuevo, tipo] = conv;
+      if (!siglaNueva || tipo === 'ELIMINADA') return;
+      const k = semNuevo || 'ELECTIVA';
+      if (!byNueva[k]) byNueva[k] = {};
+      if (!byNueva[k][siglaNueva]) {
+        byNueva[k][siglaNueva] = { siglaNueva, nombreNueva, tipo, origs: [] };
+      }
+      byNueva[k][siglaNueva].origs.push({ siglaAnt, nombreAnt: conv[1], nota: est[siglaAnt] });
+    });
+
+    const byAnt = {};
+    CONVALIDACIONES.forEach(r => {
+      const sigla = r[0], nombre = r[1], sem = r[2], tipo = r[6], orden = r[7];
+      const semN = SEM_NUM[sem] || 0;
+      if (semN < 7) return;
+      if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla)) {
+        const n = Number(est[sigla]);
+        if (isNaN(n) || n < 51) return;
+      }
+      if (!byAnt[sem]) byAnt[sem] = [];
+      byAnt[sem].push({ sigla, nombre, tipo, orden });
+    });
+
+    // Renderizar las 10 columnas (6 nuevas + 4 antiguas)
+    [...SEMS_NUEVA, ...SEMS_ANT_7PLUS].forEach((sec, idx) => {
+      let content = '';
+      if (idx < 6) {
+        // Malla Nueva
+        const items = Object.values(byNueva[sec.key] || {});
+        items.forEach(it => {
+          const res = it.origs.reduce((best, o) => {
+            const n = o.nota != null && !isNaN(Number(o.nota)) ? Number(o.nota) : null;
+            return n !== null && (best === null || n > best) ? n : best;
+          }, null);
+          const aprobada = res !== null && res >= 51;
+          const reprobada = res !== null && res < 51;
+          const sel = sugSeleccion[it.siglaNueva] || null;
+
+          let bg, borderCol, color, notaStr, badge = '';
+          if (aprobada) { bg = '#dcfce7'; borderCol = '#16a34a'; color = '#15803d'; notaStr = '✓'; }
+          else if (reprobada) { bg = '#fee2e2'; borderCol = '#dc2626'; color = '#dc2626'; notaStr = '✗'; }
+          else if (sel === 'g1') { bg = '#dbeafe'; borderCol = '#1e3a8a'; color = '#1e3a8a'; notaStr = ''; badge = '<span style="background:#1e3a8a;color:#fff;font-size:5px;padding:0 2px;border-radius:2px;margin-left:2px">G1</span>'; }
+          else if (sel === 'g2') { bg = '#ede9fe'; borderCol = '#6d28d9'; color = '#6d28d9'; notaStr = ''; badge = '<span style="background:#6d28d9;color:#fff;font-size:5px;padding:0 2px;border-radius:2px;margin-left:2px">G2</span>'; }
+          else { bg = '#f8fafc'; borderCol = '#cbd5e1'; color = '#64748b'; notaStr = 'PEND'; }
+
+          const origText = it.origs.map(o => `<div style="font-size:4.5px;line-height:1">${o.nombreAnt || o.siglaAnt} - <b>${o.siglaAnt}</b></div>`).join('');
+
+          content += `<div style="padding:2px;border:1px solid ${borderCol};border-radius:2px;font-size:6.5px;background:${bg};margin-bottom:2px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1px">
+              <b>${it.siglaNueva}</b>${badge}
+              <span style="color:${color};font-weight:700;font-size:6px">${notaStr}</span>
+            </div>
+            <div style="font-size:5.5px;font-weight:600;line-height:1.1">${it.nombreNueva}</div>
+            <div style="margin-top:2px;border-top:1px solid ${borderCol}40;padding-top:1px">
+              <span style="font-size:4.5px;color:#6b7280;display:block">antes:</span>
+              ${origText}
+            </div>
+          </div>`;
+        });
       } else {
-        bg = '#fef9c3'; borderCol = '#f59e0b'; color = '#92400e'; notaStr = 'PEND';
+        // Malla Antigua (7-10)
+        const mats = byAnt[sec.key] || [];
+        mats.sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
+        mats.forEach(m => {
+          const n = Number(est[m.sigla]);
+          const aprobada = !isNaN(n) && n >= 51;
+          const reprobada = !isNaN(n) && n < 51;
+          const sel = sugSeleccion[m.sigla] || null;
+
+          let bg, borderCol, color, notaStr, badge = '';
+          if (aprobada) { bg = '#dcfce7'; borderCol = '#16a34a'; color = '#15803d'; notaStr = '✓'; }
+          else if (reprobada) { bg = '#fee2e2'; borderCol = '#dc2626'; color = '#dc2626'; notaStr = '✗'; }
+          else if (sel === 'g1') { bg = '#dbeafe'; borderCol = '#1e3a8a'; color = '#1e3a8a'; notaStr = ''; badge = '<span style="background:#1e3a8a;color:#fff;font-size:5px;padding:0 2px;border-radius:2px;margin-left:2px">G1</span>'; }
+          else if (sel === 'g2') { bg = '#ede9fe'; borderCol = '#6d28d9'; color = '#6d28d9'; notaStr = ''; badge = '<span style="background:#6d28d9;color:#fff;font-size:5px;padding:0 2px;border-radius:2px;margin-left:2px">G2</span>'; }
+          else { bg = '#fef9c3'; borderCol = '#f59e0b'; color = '#92400e'; notaStr = 'PEND'; }
+
+          content += `<div style="padding:2px;border:1px solid ${borderCol};border-radius:2px;font-size:6.5px;background:${bg};margin-bottom:2px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1px">
+              <b>${m.sigla}</b>${badge}
+              <span style="color:${color};font-weight:700;font-size:6px">${notaStr}</span>
+            </div>
+            <div style="font-size:5.5px;font-weight:600;line-height:1.1">${m.nombre}</div>
+          </div>`;
+        });
       }
 
-      matRows += `<div style="padding:2px 4px;border:2px solid ${borderCol};border-radius:3px;font-size:7px;background:${bg};margin-bottom:2px">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <b>${m.sigla}</b>${badge}
-          <span style="color:${color};font-weight:700;font-size:6.5px">${notaStr}</span>
+      mallaCols += `<td style="vertical-align:top;width:10%;padding:1px">
+        <div style="background:${sec.color}15;border:1px solid ${sec.color}40;color:${sec.color};border-radius:2px;padding:1px;font-size:6px;font-weight:800;text-align:center;margin-bottom:2px">
+          ${sec.label}
         </div>
-        <div style="font-size:6px;color:#4b5563;line-height:1.1">${m.nombre}</div>
-      </div>`;
+        ${content}
+      </td>`;
     });
-    mallaCols += `<td style="vertical-align:top;width:10%;padding:2px">
-      <div style="background:${sec.color}18;border:1px solid ${sec.color}50;color:${sec.color};border-radius:3px;padding:2px 4px;font-size:7px;font-weight:700;text-align:center;margin-bottom:3px">
-        ${sec.label} <span style="opacity:0.6;font-size:6px">(${mats.length})</span>
-      </div>
-      ${matRows}
-    </td>`;
-  });
+
+  } else {
+    // ── PLAN 148-1: Malla Antigua Completa (10 columnas) ──────
+    const byKey = {};
+    CONVALIDACIONES.forEach(r => {
+      const sigla = r[0], nombre = r[1], sem = r[2], tipo = r[6], orden = r[7];
+      if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla)) {
+        const n = Number(est[sigla]);
+        if (isNaN(n) || n < 51) return;
+      }
+      if (!byKey[sem]) byKey[sem] = [];
+      byKey[sem].push({ sigla, nombre, tipo, orden });
+    });
+
+    SECS_SEMESTRES.forEach(sec => {
+      const mats = byKey[sec.key] || [];
+      mats.sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
+      let matRows = '';
+      mats.forEach(m => {
+        const n = Number(est[m.sigla]);
+        const aprobada = !isNaN(n) && n >= 51;
+        const reprobada = !isNaN(n) && n < 51;
+        const sel = sugSeleccion[m.sigla] || null;
+
+        let bg, borderCol, color, notaStr, badge = '';
+        if (aprobada) { bg = '#dcfce7'; borderCol = '#16a34a'; color = '#15803d'; notaStr = '✓'; }
+        else if (reprobada) { bg = '#fee2e2'; borderCol = '#dc2626'; color = '#dc2626'; notaStr = '✗'; }
+        else if (sel === 'g1') { bg = '#dbeafe'; borderCol = '#1e3a8a'; color = '#1e3a8a'; notaStr = ''; badge = '<span style="background:#1e3a8a;color:#fff;font-size:5px;padding:0 2px;border-radius:2px;margin-left:2px">G1</span>'; }
+        else if (sel === 'g2') { bg = '#ede9fe'; borderCol = '#6d28d9'; color = '#6d28d9'; notaStr = ''; badge = '<span style="background:#6d28d9;color:#fff;font-size:5px;padding:0 2px;border-radius:2px;margin-left:2px">G2</span>'; }
+        else if (m.tipo === 'ELIMINADA') { bg = '#f3f4f6'; borderCol = '#d1d5db'; color = '#9ca3af'; notaStr = 'ELIM'; }
+        else { bg = '#fef9c3'; borderCol = '#f59e0b'; color = '#92400e'; notaStr = 'PEND'; }
+
+        matRows += `<div style="padding:2px;border:1px solid ${borderCol};border-radius:2px;font-size:6.5px;background:${bg};margin-bottom:2px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1px">
+            <b>${m.sigla}</b>${badge}
+            <span style="color:${color};font-weight:700;font-size:6px">${notaStr}</span>
+          </div>
+          <div style="font-size:5.5px;font-weight:600;line-height:1.1">${m.nombre}</div>
+        </div>`;
+      });
+      mallaCols += `<td style="vertical-align:top;width:10%;padding:1px">
+        <div style="background:${sec.color}15;border:1px solid ${sec.color}40;color:${sec.color};border-radius:2px;padding:1px;font-size:6px;font-weight:800;text-align:center;margin-bottom:2px">
+          ${sec.label}
+        </div>
+        ${matRows}
+      </td>`;
+    });
+  }
 
   // Tablas de selección G1/G2
   const selG1 = Object.entries(sugSeleccion).filter(([, v]) => v === 'g1').map(([s]) => s);
   const selG2 = Object.entries(sugSeleccion).filter(([, v]) => v === 'g2').map(([s]) => s);
-  const siglaToNombre = {};
-  sugPoolCache.forEach(m => { siglaToNombre[m.sigla] = m.nombre; });
+  const siglaToNombreMap = {};
+  pool.forEach(m => { siglaToNombreMap[m.sigla] = m.nombre; });
 
   function tablaImpresion(titulo, lista, colorBg) {
     let filas = lista.map((sigla, i) => {
-      const nombre = siglaToNombre[sigla] || sigla;
-      return `<tr><td style="text-align:center;width:25px">${i + 1}</td><td style="font-weight:700;width:70px">${sigla}</td><td>${nombre}</td></tr>`;
+      const nombre = siglaToNombreMap[sigla] || sigla;
+      return `<tr><td style="text-align:center;width:20px">${i + 1}</td><td style="font-weight:700;width:60px">${sigla}</td><td>${nombre}</td></tr>`;
     }).join('');
     if (!lista.length) filas = '<tr><td colspan="3" style="text-align:center;color:#9ca3af;font-style:italic">Sin materias asignadas</td></tr>';
-    return `<div style="flex:1;min-width:250px">
-      <div style="background:${colorBg};color:#fff;padding:4px 8px;border-radius:4px 4px 0 0;font-weight:700;font-size:9px">${titulo} (${lista.length}/7)</div>
-      <table style="width:100%;border-collapse:collapse;font-size:8px">
-        <thead><tr style="background:#f1f5f9"><th style="padding:2px 4px;text-align:left">#</th><th style="padding:2px 4px;text-align:left">Sigla</th><th style="padding:2px 4px;text-align:left">Materia</th></tr></thead>
+    return `<div style="flex:1">
+      <div style="background:${colorBg};color:#fff;padding:3px 6px;border-radius:3px 3px 0 0;font-weight:700;font-size:8px">${titulo} (${lista.length}/7)</div>
+      <table style="width:100%;border-collapse:collapse;font-size:7px">
+        <thead><tr style="background:#f8fafc"><th style="padding:1px 3px;text-align:left">#</th><th style="padding:1px 3px;text-align:left">Sigla</th><th style="padding:1px 3px;text-align:left">Materia</th></tr></thead>
         <tbody>${filas}</tbody>
       </table>
     </div>`;
   }
 
   const fechaHoy = new Date().toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const tituloPagina = plan === "148-2" ? "AVANCE EN MALLA NUEVA 148-2" : "AVANCE EN MALLA ANTIGUA (148-1)";
 
   const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Hoja de Ruta - ${est.Nombre}</title>
 <style>
-  @page { size: landscape; margin: 8mm; }
+  @page { size: landscape; margin: 5mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 9px; color: #1f2937; }
-  .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1e3a8a; padding-bottom: 5px; margin-bottom: 6px; }
-  .header h1 { font-size: 13px; color: #1e3a8a; }
-  .header .info { font-size: 8px; text-align: right; color: #6b7280; }
-  .stats { display: flex; gap: 12px; margin-bottom: 4px; font-size: 8px; }
-  .stat { background: #f1f5f9; padding: 3px 8px; border-radius: 4px; }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 8px; color: #1e293b; padding: 2mm; }
+  .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #1e3a8a; padding-bottom: 3px; margin-bottom: 5px; }
+  .header h1 { font-size: 14px; font-weight: 800; color: #1e3a8a; text-transform: uppercase; }
+  .header .info { text-align: right; line-height: 1.2; }
+  .stats { display: flex; gap: 10px; margin-bottom: 5px; }
+  .stat { background: #f1f5f9; padding: 2px 6px; border-radius: 3px; border: 1px solid #e2e8f0; }
   .stat b { color: #1e3a8a; }
-  .legend { display: flex; gap: 10px; margin-bottom: 6px; font-size: 7px; color: #6b7280; flex-wrap: wrap; }
-  .leg-item { display: inline-flex; align-items: center; gap: 3px; }
-  .leg-dot { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
-  .malla-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-  .section-title { font-size: 10px; font-weight: 700; color: #1e3a8a; margin: 8px 0 4px; border-bottom: 1px solid #e5e7eb; padding-bottom: 2px; }
-  .sel-wrap { display: flex; gap: 12px; }
-  table { border-collapse: collapse; }
-  table td, table th { border-bottom: 1px solid #e5e7eb; padding: 2px 4px; }
-  .footer { margin-top: 10px; font-size: 7px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 4px; }
+  .legend { display: flex; gap: 8px; margin-bottom: 5px; font-size: 6.5px; color: #64748b; }
+  .leg-item { display: flex; align-items: center; gap: 3px; }
+  .leg-dot { width: 7px; height: 7px; border-radius: 1px; border: 1px solid #cbd5e1; }
+  .malla-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .section-title { font-size: 9px; font-weight: 800; color: #1e3a8a; margin: 6px 0 3px; border-left: 3px solid #1e3a8a; padding-left: 6px; text-transform: uppercase; }
+  .sel-wrap { display: flex; gap: 10px; }
+  table td, table th { border: 1px solid #e2e8f0; padding: 1px 3px; }
+  .footer { margin-top: 8px; font-size: 6px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 3px; }
 </style>
 </head><body>
   <div class="header">
     <div>
-      <h1>📋 HOJA DE RUTA ACADÉMICA</h1>
-      <div style="font-size:8px;color:#6b7280">Carrera de Psicología — Plan ${plan}</div>
+      <h1>📋 HOJA DE RUTA</h1>
+      <div style="font-size:7px;font-weight:700;color:#64748b">${tituloPagina}</div>
     </div>
     <div class="info">
-      <div><b>${est.Nombre}</b></div>
-      <div>Registro: ${est.Registro}</div>
-      <div>Fecha: ${fechaHoy}</div>
+      <div style="font-size:9px;font-weight:800;color:#1e3a8a">${est.Nombre}</div>
+      <div style="font-size:7px;font-weight:600">Registro: ${est.Registro} — Fecha: ${fechaHoy}</div>
     </div>
   </div>
 
   <div class="stats">
-    <span class="stat">📚 Semestre cursado: <b>${semActualStr}</b></span>
-    <span class="stat">✅ Aprobadas: <b>${totalAprobadas}</b></span>
-    <span class="stat">⏳ Pendientes: <b>${pool.length}</b></span>
-    <span class="stat">📊 Avance: <b>${est._porcentaje_avance ?? '—'}%</b></span>
+    <span class="stat">Semestre Actual: <b>${semActualStr}</b></span>
+    <span class="stat">Aprobadas: <b>${totalAprobadas}</b></span>
+    <span class="stat">Situación: <b>${displayPlan}</b></span>
   </div>
 
   <div class="legend">
-    <span class="leg-item"><span class="leg-dot" style="background:#dcfce7;border:1px solid #16a34a"></span> Aprobada</span>
-    <span class="leg-item"><span class="leg-dot" style="background:#fee2e2;border:1px solid #dc2626"></span> Reprobada</span>
-    <span class="leg-item"><span class="leg-dot" style="background:#fef9c3;border:1px solid #f59e0b"></span> Pendiente</span>
-    <span class="leg-item"><span class="leg-dot" style="background:#dbeafe;border:1px solid #1e3a8a"></span> G1/2026</span>
-    <span class="leg-item"><span class="leg-dot" style="background:#ede9fe;border:1px solid #6d28d9"></span> G2/2026</span>
-    <span class="leg-item"><span class="leg-dot" style="background:#f3f4f6;border:1px solid #d1d5db"></span> Eliminada</span>
+    <div class="leg-item"><span class="leg-dot" style="background:#dcfce7;border-color:#16a34a"></span> Aprobada</div>
+    <div class="leg-item"><span class="leg-dot" style="background:#fee2e2;border-color:#dc2626"></span> Reprobada</div>
+    <div class="leg-item"><span class="leg-dot" style="background:#fef9c3;border-color:#f59e0b"></span> Pendiente</div>
+    <div class="leg-item"><span class="leg-dot" style="background:#dbeafe;border-color:#1e3a8a"></span> G1/2026</div>
+    <div class="leg-item"><span class="leg-dot" style="background:#ede9fe;border-color:#6d28d9"></span> G2/2026</div>
   </div>
 
-  <div class="section-title">AVANCE EN MALLA ANTIGUA (148-1)</div>
+  <div class="section-title">CONTROL DE AVANCE ACADÉMICO</div>
   <table class="malla-table"><tr>${mallaCols}</tr></table>
 
-  <div class="section-title">INSCRIPCIÓN SUGERIDA — GESTIÓN 2026</div>
+  <div class="section-title">MATERIAS SUGERIDAS PARA GESTIÓN 2026</div>
   <div class="sel-wrap">
     ${tablaImpresion('Gestión 1/2026', selG1, '#1e3a8a')}
     ${tablaImpresion('Gestión 2/2026', selG2, '#6d28d9')}
   </div>
 
-  <div class="footer">Generado desde Hoja de Ruta Académica — ${fechaHoy}</div>
+  <div class="footer">Este documento es una guía académica sugerida generada el ${fechaHoy}.</div>
 </body></html>`;
 
   const win = window.open('', '_blank');
