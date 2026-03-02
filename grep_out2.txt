@@ -1,2 +1,0 @@
-﻿1135: let estudianteActual = null;
-1275: estudianteActual = est;
