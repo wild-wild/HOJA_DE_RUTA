@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hoja de Ruta – Registro de Estudiantes</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet" />
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+    <!-- Estilos personalizados -->
+    <link rel="stylesheet" href="estilos.css" />
+    <style>
+        .registration-layout {
+            max-width: 98%;
+            margin: 1.5rem auto;
+            padding: 0 0.5rem;
+        }
+
+        .form-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+
+        .malla-selection-header {
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 2px solid var(--accent);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .mat-card.selected {
+            border: 2.5px solid var(--accent);
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px var(--accent-glow);
+            position: relative;
+            z-index: 5;
+        }
+
+        .mat-card.selected:not(.mat-eliminada) {
+            background: var(--bg-active);
+        }
+
+        .mat-card.mat-eliminada.selected {
+            background: #fee2e2;
+            border-color: var(--accent);
+        }
+
+        .mat-card.selected::before {
+            content: "\f058";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            top: 2px;
+            right: 4px;
+            color: var(--accent);
+            font-size: 0.9rem;
+            z-index: 10;
+        }
+
+        .btn-save {
+            background: var(--accent);
+            color: white;
+            padding: 0.6rem 1.5rem;
+            border-radius: var(--radius);
+            font-weight: 700;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .btn-save:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .grid-labels {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.7rem;
+            color: var(--text-2);
+            margin-bottom: 0.75rem;
+        }
+
+        .label-item {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .label-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="header">
+        <div class="header-inner">
+            <div class="header-brand">
+                <a href="analizar.html" class="brand-icon">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </a>
+                <div>
+                    <h1 class="brand-title">Nuevo Registro de Estudiante</h1>
+                    <p class="brand-sub">Malla Plan 148-1 (Antigua)</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="registration-layout">
+        <div class="form-card">
+            <h2 class="text-xl font-bold mb-4 text-slate-800">Información del Estudiante</h2>
+            <form id="registrationForm" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="col-span-1 md:col-span-2">
+                    <label class="block text-sm font-semibold mb-1">Nombre Completo</label>
+                    <input type="text" id="nombre" required class="search-input w-full" placeholder="Ej: JUAN PEREZ">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Registro</label>
+                    <input type="number" id="registro" required class="search-input w-full" placeholder="Ej: 215000000">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold mb-1">Fecha de Ingreso</label>
+                    <input type="text" id="fecha_ingreso" class="search-input w-full" placeholder="Ej: 1/2021">
+                </div>
+            </form>
+        </div>
+
+        <div class="malla-selection-header">
+            <div class="flex flex-col">
+                <h2 class="text-xl font-bold text-slate-800">Seleccionar Materias Vencidas</h2>
+                <p class="text-sm text-slate-500">Marca las materias que el estudiante ya aprobó en cualquiera de los
+                    planes.</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <div id="selectedCount" class="text-sm font-semibold text-accent">0 materias seleccionadas</div>
+                <button type="button" form="registrationForm" id="btnSave" class="btn-save">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Guardar Estudiante
+                </button>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" id="tabAntigua" onclick="mostrarTab('antigua')">
+                <i class="fa-solid fa-book"></i> Malla Antigua (Plan 148-1)
+            </button>
+            <button class="tab" id="tabNueva" onclick="mostrarTab('nueva')">
+                <i class="fa-solid fa-book-open"></i> Malla Nueva (Plan 148-2)
+            </button>
+        </div>
+
+        <div class="grid-labels">
+            <div class="label-item"><span class="label-dot bg-slate-100 border"></span> Pendiente</div>
+            <div class="label-item"><span class="label-dot bg-blue-100 border-2 border-blue-900"></span> Seleccionada
+                (Vencida)</div>
+            <div class="label-item"><span class="label-dot bg-red-100 border border-red-300"></span> Eliminada del plan
+            </div>
+            <div class="label-item"><span class="label-dot bg-cyan-100 border border-cyan-300"></span>
+                Homologada/Convalidada</div>
+        </div>
+
+        <div id="contentAntigua" class="tab-content">
+            <div id="mallaAntigua" class="malla-wrap mt-4">
+                <div class="flex justify-center items-center p-20 text-slate-400">
+                    <div class="spinner mr-2"></div> Cargando malla antigua...
+                </div>
+            </div>
+        </div>
+
+        <div id="contentNueva" class="tab-content" style="display:none">
+            <div id="mallaNueva" class="malla-wrap mt-4">
+                <div class="flex justify-center items-center p-20 text-slate-400">
+                    <div class="spinner mr-2"></div> Cargando malla nueva...
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50"></div>
+
+    <script type="module" src="registros.js"></script>
+</body>
+
+</html>
