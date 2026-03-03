@@ -2158,3 +2158,22 @@ body {
 .toast-error {
   background: #dc2626;
 }
+/*  Extra info in PDF modal cards  */
+.mm-card-footer {
+  margin-top: 0.35rem;
+  border-top: 1px dashed #cbd5e1;
+  padding-top: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.mm-mat-extra {
+  font-size: 0.62rem;
+  color: #64748b;
+  line-height: 1.2;
+}
+
+.mm-mat-extra b {
+  color: #1e293b;
+}
