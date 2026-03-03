@@ -1,0 +1,74 @@
+{
+  "missing_from_js": [
+    {
+      "sigla": "DEP013",
+      "nombre": "GRUPO RELACIONAL II",
+      "semestre": "ELECTIVA",
+      "obs": "HOMOLOGACI\u00d3N"
+    },
+    {
+      "sigla": "DEP015",
+      "nombre": "TECNICAS RECREACIONALES",
+      "semestre": "ELECTIVA",
+      "obs": "CONVALIDACI\u00d3N"
+    },
+    {
+      "sigla": "LEN301",
+      "nombre": "LENGUA NATIVA I",
+      "semestre": "ELECTIVA",
+      "obs": "HOMOLOGACI\u00d3N"
+    },
+    {
+      "sigla": "LEN321",
+      "nombre": "LENGUA NATIVA II",
+      "semestre": "ELECTIVA",
+      "obs": "ELIMINADA"
+    },
+    {
+      "sigla": "LEN401",
+      "nombre": "LENGUA NATIVA III",
+      "semestre": "ELECTIVA",
+      "obs": "ELIMINADA"
+    },
+    {
+      "sigla": "LEN421",
+      "nombre": "LENGUA NATIVA IV",
+      "semestre": "ELECTIVA",
+      "obs": "ELIMINADA"
+    },
+    {
+      "sigla": "LIN110",
+      "nombre": "IDIOMA INGL\u00c9S I",
+      "semestre": "ELECTIVA",
+      "obs": "ELIMINADA"
+    },
+    {
+      "sigla": "LIN111",
+      "nombre": "IDIOMA INGL\u00c9S II",
+      "semestre": "ELECTIVA",
+      "obs": "ELIMINADA"
+    },
+    {
+      "sigla": "INV503",
+      "nombre": "TALLER DE GRADO DE TESIS II",
+      "semestre": "D\u00c9CIMO SEMESTRE",
+      "obs": "ELIMINADA"
+    },
+    {
+      "sigla": "INV504",
+      "nombre": "TALLER DE GRADO DE TRABAJO DIRIGIDO II",
+      "semestre": "D\u00c9CIMO SEMESTRE",
+      "obs": "ELIMINADA"
+    },
+    {
+      "sigla": "INV505",
+      "nombre": "TALLER DE GRADO DE PROYECTO SOCIAL II",
+      "semestre": "D\u00c9CIMO SEMESTRE",
+      "obs": "ELIMINADA"
+    }
+  ],
+  "extra_in_js": [
+    "DEP113",
+    "INFORME"
+  ]
+}

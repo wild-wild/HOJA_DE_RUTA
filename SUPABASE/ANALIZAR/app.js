@@ -3,6 +3,14 @@
 //  Fuente de datos: Supabase (tabla "estudiantes")
 // ============================================================
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+import {
+  CONVALIDACIONES,
+  SECS_SEMESTRES,
+  SECS_EXTRA,
+  PREREQ_148_1,
+  PREREQ_148_2,
+  SEM_NUM
+} from "./data.js";
 
 const SUPABASE_URL = "https://kylsbkxxpsntlhhsdqgw.supabase.co";
 const SUPABASE_KEY = "sb_publishable_7KbBls3f9-VlD0uj2ZU2sg_ll3-mJ5_"; // publishable key (solo lectura con RLS)
@@ -14,143 +22,6 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
   }
 });
 
-// ─────────────────────────────────────────────────────────────
-// 1. TABLA DE CONVALIDACIONES  (del Excel convalidaciones.xlsx)
-//    [siglaAnt, nombreAnt, semAnt, siglaNueva, nombreNueva, semNuevo, tipo, orden]
-// ─────────────────────────────────────────────────────────────
-const CONVALIDACIONES = [
-  ["ANT100", "ANTROPOLOGÍA CULTURAL", "PRIMER SEMESTRE", "ANT 181", "ANTROPOLOGÍA", "PRIMER SEMESTRE", "HOMOLOGACIÓN", 4],
-  ["BIO100", "BIOPSICOLOGIA", "PRIMER SEMESTRE", "BIO 141", "BIOPSICOLOGÍA", "PRIMER SEMESTRE", "HOMOLOGACIÓN", 6],
-  ["CSO101", "SOCIOLOGÍA I", "PRIMER SEMESTRE", "CSO 121", "SOCIOLOGÍA GENERAL", "PRIMER SEMESTRE", "HOMOLOGACIÓN", 3],
-  ["DEP112", "ESTRATEGIAS DE APRENDIZAJE", "PRIMER SEMESTRE", "INV 131", "ESTRATEGIAS DE APRENDIZAJE", "PRIMER SEMESTRE", "HOMOLOGACIÓN", 7],
-  ["EST121", "ESTADÍSTICA I", "PRIMER SEMESTRE", "EST 351", "ESTADÍSTICA APLICADA A LA PSICOLOGÍA I", "TERCER SEMESTRE", "HOMOLOGACIÓN", 2],
-  ["FIL101", "FILOSOFÍA", "PRIMER SEMESTRE", "FIL 161", "FILOSOFÍA", "PRIMER SEMESTRE", "HOMOLOGACIÓN", 1],
-  ["PSI101", "PSICOLOGÍA I", "PRIMER SEMESTRE", "PSI 105", "PSICOLOGÍA I", "PRIMER SEMESTRE", "HOMOLOGACIÓN", 5],
-  ["ANT150", "ANTROPOLOGIA CULTURAL BOLIVIANA", "SEGUNDO SEMESTRE", "", "", "", "ELIMINADA", 4],
-  ["BIO150", "PSICOFISIOLOGÍA", "SEGUNDO SEMESTRE", "BIO 242", "PSICOFISIOLOGÍA", "SEGUNDO SEMESTRE", "HOMOLOGACIÓN", 6],
-  ["CSO150", "SOCIOLOGÍA II", "SEGUNDO SEMESTRE", "CSO 222", "FORMACIÓN SOCIAL BOLIVIANA", "SEGUNDO SEMESTRE", "HOMOLOGACIÓN", 3],
-  ["EST152", "ESTADÍSTICA II", "SEGUNDO SEMESTRE", "EST 452", "ESTADÍSTICA APLICADA A LA PSICOLOGÍA II", "CUARTO SEMESTRE", "HOMOLOGACIÓN", 2],
-  ["FIL150", "EPISTEMOLOGIA", "SEGUNDO SEMESTRE", "FIL 262", "EPISTEMOLOGÍA", "SEGUNDO SEMESTRE", "HOMOLOGACIÓN", 1],
-  ["PSI150", "PSICOLOGÍA II", "SEGUNDO SEMESTRE", "PSI 212", "PSICOLOGÍA II", "SEGUNDO SEMESTRE", "HOMOLOGACIÓN", 5],
-  ["BIO200", "NEUROPSICOLOGÍA I", "TERCER SEMESTRE", "BIO 343", "NEUROPSICOLOGÍA I", "TERCER SEMESTRE", "HOMOLOGACIÓN", 5],
-  ["CSO200", "PSICOLOGÍA SOCIAL", "TERCER SEMESTRE", "CSO 525", "PSICOLOGÍA SOCIAL", "QUINTO SEMESTRE", "HOMOLOGACIÓN", 2],
-  ["CSO201", "PSICOLOGIA ETNOECOLÓGICA", "TERCER SEMESTRE", "OPT 009", "ETNOPSICOLOGÍA", "ELECTIVA", "HOMOLOGACIÓN", 3],
-  ["INV200", "INVESTIGACIÓN I", "TERCER SEMESTRE", "INV 232", "REDACCIÓN CIENTÍFICA", "SEGUNDO SEMESTRE", "HOMOLOGACIÓN", 1],
-  ["PSI200", "DESARROLLO HUMANO I", "TERCER SEMESTRE", "PSI 213", "DESARROLLO HUMANO I", "SEGUNDO SEMESTRE", "HOMOLOGACIÓN", 3],
-  ["PSI202", "APRENDIZAJE", "TERCER SEMESTRE", "PSI 314", "ANÁLISIS EXPERIMENTAL DE LA CONDUCTA HUMANA", "TERCER SEMESTRE", "CONVALIDACIÓN", 6],
-  ["PSI203", "TEORIAS Y SISTEMAS I", "TERCER SEMESTRE", "PSI 314", "ANÁLISIS EXPERIMENTAL DE LA CONDUCTA HUMANA", "TERCER SEMESTRE", "HOMOLOGACIÓN", 4],
-  ["BIO250", "NEUROPSICOLOGÍA II", "CUARTO SEMESTRE", "BIO 444", "NEUROPSICOLOGÍA II", "CUARTO SEMESTRE", "HOMOLOGACIÓN", 5],
-  ["CSO250", "PSICOLOGÍA GRUPAL Y ORGANIZACIONAL", "CUARTO SEMESTRE", "CSO 524", "PSICOLOGÍA DE LOS GRUPOS", "QUINTO SEMESTRE", "HOMOLOGACIÓN", 2],
-  ["INV250", "INVESTIGACIÓN II", "CUARTO SEMESTRE", "INV 232", "REDACCIÓN CIENTÍFICA", "SEGUNDO SEMESTRE", "HOMOLOGACIÓN", 1],
-  ["PSI254", "DESARROLLO HUMANO II", "CUARTO SEMESTRE", "PSI 311", "DESARROLLO HUMANO II", "TERCER SEMESTRE", "HOMOLOGACIÓN", 3],
-  ["PSI255", "ETOLOGÍA", "CUARTO SEMESTRE", "", "", "", "ELIMINADA", 6],
-  ["PSI256", "TEORIAS Y SISTEMAS II", "CUARTO SEMESTRE", "", "", "", "ELIMINADA", 4],
-  ["CSO300", "COMPORTAMIENTO Y SOCIEDAD", "QUINTO SEMESTRE", "CSO 425", "COMPORTAMIENTO Y SOCIEDAD", "CUARTO SEMESTRE", "HOMOLOGACIÓN", 2],
-  ["INV300", "INVESTIGACIÓN III", "QUINTO SEMESTRE", "INV 633", "MÉTODOS DE INVESTIGACIÓN CUANTITATIVA", "SEXTO SEMESTRE", "HOMOLOGACIÓN", 1],
-  ["PSI310", "PSICOLOGÍA DE LA PERSONALIDAD I", "QUINTO SEMESTRE", "", "", "", "ELIMINADA", 3],
-  ["PSI311", "EVALUACIÓN PSICOLÓGICA I", "QUINTO SEMESTRE", "PSI 316", "TÉCNICAS PSICOMÉTRICAS I", "TERCER SEMESTRE", "HOMOLOGACIÓN", 4],
-  ["PSI312", "PSICOLOGIA COGNITIVA I", "QUINTO SEMESTRE", "PSI 412", "PSICOLOGIA COGNITIVA I", "CUARTO SEMESTRE", "HOMOLOGACIÓN", 6],
-  ["PSI313", "PSICOPATOLOGÍA I", "QUINTO SEMESTRE", "PSI 515", "PSICOPATOLOGÍA I", "QUINTO SEMESTRE", "HOMOLOGACIÓN", 5],
-  ["CSO350", "DIAGNÓSTICO DE NECESIDADES", "SEXTO SEMESTRE", "CSO 726", "PROYECTOS I", "SÉPTIMO SEMESTRE", "CONVALIDACIÓN", 2],
-  ["INV350", "INVESTIGACIÓN IV", "SEXTO SEMESTRE", "INV 734", "MÉTODOS DE INVESTIGACIÓN CUALITATIVA", "SÉPTIMO SEMESTRE", "HOMOLOGACIÓN", 1],
-  ["PSI350", "PSICOLOGÍA DE LA PERSONALIDAD II", "SEXTO SEMESTRE", "", "", "", "ELIMINADA", 3],
-  ["PSI351", "EVALUACIÓN PSICOLÓGICA II", "SEXTO SEMESTRE", "PSI 414", "TÉCNICAS PSICOMÉTRICAS II", "CUARTO SEMESTRE", "HOMOLOGACIÓN", 4],
-  ["PSI352", "PSICOLOGÍA COGNITIVA II", "SEXTO SEMESTRE", "PSI 517", "PSICOLOGÍA COGNITIVA II", "QUINTO SEMESTRE", "HOMOLOGACIÓN", 7],
-  ["PSI353", "PSICOANÁLISIS", "SEXTO SEMESTRE", "PSI 315", "PSICOANÁLISIS I", "TERCER SEMESTRE", "HOMOLOGACIÓN", 6],
-  ["PSI354", "PSICOPATOLOGÍA II", "SEXTO SEMESTRE", "PSI 619", "PSICOPATOLOGÍA II", "SEXTO SEMESTRE", "HOMOLOGACIÓN", 5],
-  ["CSO400", "PROYECTOS I", "SÉPTIMO SEMESTRE", "CSO 726", "PROYECTOS I", "SÉPTIMO SEMESTRE", "HOMOLOGACIÓN", 2],
-  ["CSO401", "TÉCNICAS DE INTERVENCIÓN SOCIO-ORGANIZACIONAL I", "SÉPTIMO SEMESTRE", "PSI 634", "INTERVENCIÓN PSICOSOCIAL", "SEXTO SEMESTRE", "HOMOLOGACIÓN", 3],
-  ["INV400", "INVESTIGACIÓN V", "SÉPTIMO SEMESTRE", "INV 835", "MÉTODOS DE INVESTIGACIÓN MIXTA", "OCTAVO SEMESTRE", "HOMOLOGACIÓN", 1],
-  ["PSI400", "TECNICAS DE INTERVENCION CLINICA I", "SÉPTIMO SEMESTRE", "PSI 611", "PSICOLOGÍA CLÍNICA", "SEXTO SEMESTRE", "HOMOLOGACIÓN", 5],
-  ["PSI401", "TÉCNICAS PROYECTIVAS", "SÉPTIMO SEMESTRE", "PSI 518", "TÉCNICAS PSICODINÁMICAS", "QUINTO SEMESTRE", "HOMOLOGACIÓN", 4],
-  ["PSI402", "TÉCNICAS DE INTERVENCIÓN EDUCACIONAL I", "SÉPTIMO SEMESTRE", "PSI 815", "INTERVENCIÓN EDUCATIVA I", "OCTAVO SEMESTRE", "HOMOLOGACIÓN", 6],
-  ["CSO450", "PROYECTOS II", "OCTAVO SEMESTRE", "CSO 827", "PROYECTOS II", "OCTAVO SEMESTRE", "HOMOLOGACIÓN", 2],
-  ["CSO451", "TÉCNICAS DE INTERVENCIÓN SOCIO-ORGANIZACIONAL II", "OCTAVO SEMESTRE", "PSI 614", "INTERVENCIÓN ORGANIZACIONAL RECURSOS HUMANOS I", "SEXTO SEMESTRE", "HOMOLOGACIÓN", 3],
-  ["INV450", "INVESTIGACIÓN VI", "OCTAVO SEMESTRE", "INV 915", "GESTIÓN DEL CONOCIMIENTO", "NOVENO SEMESTRE", "CONVALIDACIÓN", 1],
-  ["PSI450", "TECNICAS DE INTERVENCION CLINICA II", "OCTAVO SEMESTRE", "PSI 817", "INTERVENCIÓN CLÍNICA SISTÉMICA", "OCTAVO SEMESTRE", "COMPENSACIÓN", 5],
-  ["PSI451", "PSICODIAGNÓSTICO", "OCTAVO SEMESTRE", "PSI 612", "PSICODIAGNÓSTICO", "SEXTO SEMESTRE", "HOMOLOGACIÓN", 4],
-  ["PSI452", "TECNICAS DE INTERVENCION EDUCACIONAL II", "OCTAVO SEMESTRE", "PSI 918", "INTERVENCIÓN EDUCATIVA II", "NOVENO SEMESTRE", "HOMOLOGACIÓN", 6],
-  ["DEP500", "ETICA PROFESIONAL I", "NOVENO SEMESTRE", "PSI 916", "PSICOÉTICA", "NOVENO SEMESTRE", "CONVALIDACIÓN", 1],
-  ["DEP501", "ETICA PROFESIONAL II", "DÉCIMO SEMESTRE", "", "", "", "ELIMINADA", 1],
-  ["DEP012", "GRUPO RELACIONAL I", "ELECTIVA", "OPT 006", "GRUPO RELACIONAL I", "ELECTIVA", "HOMOLOGACIÓN", null],
-  ["DEP013", "GRUPO RELACIONAL II", "ELECTIVA", "OPT 007", "GRUPO RELACIONAL II", "ELECTIVA", "HOMOLOGACIÓN", null],
-  ["DEP015", "TECNICAS RECREACIONALES", "ELECTIVA", "OPT 006", "GRUPO RELACIONAL I", "ELECTIVA", "CONVALIDACIÓN", null],
-  ["INF151", "COMPUTACIÓN I", "ELECTIVA", "OPT 005", "TALLER DE TIC", "ELECTIVA", "CONVALIDACIÓN", null],
-  ["INF152", "COMPUTACIÓN II", "ELECTIVA", "", "", "", "ELIMINADA", null],
-  ["LEN301", "LENGUA NATIVA I", "ELECTIVA", "OPT 002", "LENGUA NATIVA", "ELECTIVA", "HOMOLOGACIÓN", null],
-  ["LEN321", "LENGUA NATIVA II", "ELECTIVA", "", "", "", "ELIMINADA", null],
-  ["LEN401", "LENGUA NATIVA III", "ELECTIVA", "", "", "", "ELIMINADA", null],
-  ["LEN421", "LENGUA NATIVA IV", "ELECTIVA", "", "", "", "ELIMINADA", null],
-  ["LIN110", "IDIOMA INGLÉS I", "ELECTIVA", "", "", "", "ELIMINADA", null],
-  ["LIN111", "IDIOMA INGLÉS II", "ELECTIVA", "", "", "", "ELIMINADA", null],
-  ["INV500", "TALLER DE GRADO DE TESIS I", "NOVENO SEMESTRE", "INV 936", "PERFIL DE GRADO", "NOVENO SEMESTRE", "HOMOLOGACIÓN", null],
-  ["INV501", "TALLER DE GRADO DE TRABAJO DIRIGIDO I", "NOVENO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["INV502", "TALLER DE GRADO DE PROYECTO SOCIAL I", "NOVENO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["CSO452", "PSICOLOGÍA AMBIENTAL I", "NOVENO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["CSO453", "PSICOLOGÍA COMUNITARIA I", "NOVENO SEMESTRE", "PSI 714", "PSICOLOGÍA COMUNITARIA", "SÉPTIMO SEMESTRE", "HOMOLOGACIÓN", null],
-  ["CSO454", "PSICOLOGÍA DE LAS ORGANIZACIONES I", "NOVENO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["CSO455", "PSICOLOGÍA AMBIENTAL II", "DÉCIMO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["CSO456", "PSICOLOGÍA COMUNITARIA II", "DÉCIMO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["CSO457", "PSICOLOGÍA DE LAS ORGANIZACIONES II", "DÉCIMO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["PSI500", "ABORDAJE CLÍNICO I", "NOVENO SEMESTRE", "PSI 712", "INTERVENCIÓN CLÍNICA HUMANISTA", "SÉPTIMO SEMESTRE", "COMPENSACIÓN", null],
-  ["PSI501", "ABORDAJE EDUCATIVO I", "NOVENO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["PSI502", "ABORDAJE SOCIO ORGANIZACIONAL I", "NOVENO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["PSI503", "ABORDAJE CLÍNICO II", "DÉCIMO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["PSI504", "ABORDAJE EDUCATIVO II", "DÉCIMO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["PSI505", "ABORDAJE SOCIO-ORGANIZACIONAL II", "DÉCIMO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["PSI600", "ABORDAJE CLÍNICO I", "NOVENO SEMESTRE", "PSI 816", "INTERVENCIÓN CLÍNICA COGNITIVO CONDUCTUAL I", "OCTAVO SEMESTRE", "HOMOLOGACIÓN", null],
-  ["PSI601", "ABORDAJE EDUCATIVO I", "NOVENO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["PSI602", "ABORDAJE SOCIO-ORGANIZACIONAL I", "NOVENO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["PSI603", "ABORDAJE CLÍNICO II", "DÉCIMO SEMESTRE", "PSI 912", "INTERVENCIÓN CLÍNICA COGNITIVO CONDUCTUAL II", "NOVENO SEMESTRE", "HOMOLOGACIÓN", null],
-  ["PSI604", "ABORDAJE EDUCATIVO II", "DÉCIMO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["PSI605", "ABORDAJE SOCIO-ORGANIZACIONAL II", "DÉCIMO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["PSI700", "ABORDAJE CLÍNICO I", "NOVENO SEMESTRE", "PSI 711", "INTERVENCIÓN CLÍNICA PSICOANALÍTICA", "SÉPTIMO SEMESTRE", "CONVALIDACIÓN", null],
-  ["PSI701", "ABORDAJE EDUCATIVO I", "NOVENO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["PSI702", "ABORDAJE SOCIO-ORGANIZACIONAL I", "NOVENO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["PSI703", "ABORDAJE CLÍNICO II", "DÉCIMO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["PSI704", "ABORDAJE EDUCATIVO II", "DÉCIMO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["PSI705", "ABORDAJE SOCIO-ORGANIZACIONAL II", "DÉCIMO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["INV503", "TALLER DE GRADO DE TESIS II", "DÉCIMO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["INV504", "TALLER DE GRADO DE TRABAJO DIRIGIDO II", "DÉCIMO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["INV505", "TALLER DE GRADO DE PROYECTO SOCIAL II", "DÉCIMO SEMESTRE", "", "", "", "ELIMINADA", null],
-  ["ANT201", "MOVIMIENTOS INDÍGENAS EN BOLIVIA", "TALLER", "", "", "", "ELIMINADA", null],
-  ["ANT301", "TERRITORIOS EN LOS PUEBLOS INDÍGENAS BOLIVIANOS", "TALLER", "", "", "", "ELIMINADA", null],
-  ["ANT302", "RELAC.INTERÉTNICAS Y ETNICIDAD", "TALLER", "", "", "", "ELIMINADA", null],
-  ["ANT304", "IDENTIDAD Y CULTURAS", "TALLER", "", "", "", "ELIMINADA", null],
-  ["CSA202", "SOCIEDAD DE LA INFANCIA, ADOLESCENCIA Y JUVENTUD", "TALLER", "OPT 004", "LEGISLACIÓN Y DERECHOS HUMANOS", "ELECTIVA", "CONVALIDACIÓN", null],
-  ["CSA203", "SOCIOLOGÍA DE LA ORGANIZACIÓN Y TRABAJO", "TALLER", "", "", "", "ELIMINADA", null],
-  ["CSA301", "SOCIOLOGÍA DE LAS MIGRACIONES", "TALLER", "", "", "", "ELIMINADA", null],
-  ["EPS203", "DELITO Y SOCIEDAD", "TALLER", "PSI 914", "PSICOLOGÍA JURÍDICA Y FORENSE", "NOVENO SEMESTRE", "CONVALIDACIÓN", null],
-  ["PSI552", "CLINICA PSICOANALITICA", "TALLER", "", "", "", "ELIMINADA", null],
-  ["PSI553", "PSICOANALISIS CON ADOLESCENTES", "TALLER", "", "", "", "ELIMINADA", null],
-  ["PSI554", "PSICOSOMÁTICA", "TALLER", "", "", "", "ELIMINADA", null],
-  ["PSI555", "PSICOANALISIS DE NINOS", "TALLER", "PSI 413", "PSICOANÁLISIS II", "CUARTO SEMESTRE", "CONVALIDACIÓN", null],
-  ["PSI556", "SALUD MENTAL COMUNITARIA", "TALLER", "", "", "", "ELIMINADA", null],
-  ["PSI557", "PSICOLOGÍA DE LA COMUNICACIÓN", "TALLER", "", "", "", "ELIMINADA", null],
-  ["PSI558", "TÉCNICAS DE CONCILIACIÓN", "TALLER", "", "", "", "ELIMINADA", null],
-  ["PSI559", "TERAPIA ROGERIANA", "TALLER", "PSI 416", "PSICOLOGÍA HUMANÍSTICA", "CUARTO SEMESTRE", "CONVALIDACIÓN", null],
-  ["PSI560", "PSICODRAMA", "TALLER", "", "", "", "ELIMINADA", null],
-  ["PSI561", "PSICOLOGÍA POSITIVA", "TALLER", "", "", "", "ELIMINADA", null],
-  ["PSI562", "DIFICULTADES DE APRENDIZAJE", "TALLER", "", "", "", "ELIMINADA", null],
-  ["PSI563", "PSICOFARMACOLOGÍA", "TALLER", "", "", "", "ELIMINADA", null],
-  ["PSI564", "PSICOHIGIENE", "TALLER", "", "", "", "ELIMINADA", null],
-  ["PSI565", "ORIENTACIÓN VOCACIONAL", "TALLER", "", "", "", "ELIMINADA", null],
-  ["PSI566", "PSICOLOGÍA DE LA SEXUALIDAD", "TALLER", "OPT 008", "PSICOLOGÍA DE LA SEXUALIDAD", "ELECTIVA", "HOMOLOGACIÓN", null],
-  ["PSI567", "PSICOLOGIA ORGANIZACIONAL", "TALLER", "", "", "", "ELIMINADA", null],
-  ["PSI568", "EDUCACIÓN ESPECIAL", "TALLER", "OPT 003", "EDUCACIÓN ESPECIAL", "ELECTIVA", "HOMOLOGACIÓN", null],
-  ["PSI569", "PSICOLOGÍA DEL DEPORTE", "TALLER", "", "", "", "ELIMINADA", null],
-  ["SCA204", "SOCIOLOGÍA DE LA SALUD", "TALLER", "", "", "", "ELIMINADA", null],
-  ["SCA205", "GÉNERO Y DESARROLLO", "TALLER", "OPT 001", "PSICOLOGÍA DE LA SALUD", "ELECTIVA", "CONVALIDACIÓN", null],
-  ["SUI201", "TEORÍA DEL CONFLICTO SOCIAL", "TALLER", "", "", "", "ELIMINADA", null],
-  ["SUI302", "ECOLOGÍA SOCIAL", "TALLER", "", "", "", "ELIMINADA", null],
-  ["", "", "", "PPP 100", "PRÁCTICA PRE PROFESIONAL", "NOVENO SEMESTRE", "NUEVA", null],
-  ["", "", "", "BIO 523", "PSICOLINGUISTICA", "QUINTO SEMESTRE", "NUEVA", null],
-  ["", "", "", "GRL 001", "MODALIDAD DE GRADUACIÓN", "DÉCIMO SEMESTRE", "NUEVA ASIGNATURA", null],
-  ["", "", "", "GDI 001", "GRADUACIÓN DIRECTA", "DÉCIMO SEMESTRE", "NUEVA ASIGNATURA", null],
-  ["", "", "", "OPT 010", "SOCIOPATOLOGÍA", "ELECTIVA", "NUEVA ASIGNATURA", null],
-  ["", "", "", "OPT 011", "PSICOTERAPIA INFANTIL", "ELECTIVA", "NUEVA ASIGNATURA", null],
-];
-
 // Siglas que se muestran SIEMPRE en 9no/10mo (sin importar si tiene nota)
 const SIGLAS_SIEMPRE_9_10 = new Set(["DEP500", "DEP501"]);
 // Semestres donde aplica el filtro "solo mostrar si aprobada"
@@ -161,25 +32,6 @@ const CONV_BY_SIGLA = {};
 CONVALIDACIONES.forEach((r) => {
   CONV_BY_SIGLA[r[0]] = r;
 });
-
-// Grupos de semestres en orden estricto para la malla
-const SECS_SEMESTRES = [
-  { key: "PRIMER SEMESTRE", label: "1°", color: "#1d4ed8" },
-  { key: "SEGUNDO SEMESTRE", label: "2°", color: "#1e40af" },
-  { key: "TERCER SEMESTRE", label: "3°", color: "#1a56db" },
-  { key: "CUARTO SEMESTRE", label: "4°", color: "#6d28d9" },
-  { key: "QUINTO SEMESTRE", label: "5°", color: "#7c3aed" },
-  { key: "SEXTO SEMESTRE", label: "6°", color: "#a21caf" },
-  { key: "SÉPTIMO SEMESTRE", label: "7°", color: "#be185d" },
-  { key: "OCTAVO SEMESTRE", label: "8°", color: "#b91c1c" },
-  { key: "NOVENO SEMESTRE", label: "9°", color: "#92400e" },
-  { key: "DÉCIMO SEMESTRE", label: "10°", color: "#065f46" },
-];
-const SECS_EXTRA = [
-  { key: "ELECTIVA", label: "⚡ ELECTIVAS", color: "#0f766e" },
-  { key: "TALLER", label: "🛠 TALLERES", color: "#374151" },
-  { key: "PRÁCTICAS", label: "📋 PRÁCTICAS", color: "#1e3a5f" },
-];
 
 // ─────────────────────────────────────────────────────────────
 // 2. ESTADO GLOBAL
@@ -925,110 +777,19 @@ document.getElementById("searchInput").addEventListener("input", (e) => {
 // ─────────────────────────────────────────────────────────────
 // 12. MAPA SEMESTRE → NÚMERO
 // ─────────────────────────────────────────────────────────────
-const SEM_NUM = {
-  "PRIMER SEMESTRE": 1,
-  "SEGUNDO SEMESTRE": 2,
-  "TERCER SEMESTRE": 3,
-  "CUARTO SEMESTRE": 4,
-  "QUINTO SEMESTRE": 5,
-  "SEXTO SEMESTRE": 6,
-  "SÉPTIMO SEMESTRE": 7,
-  "OCTAVO SEMESTRE": 8,
-  "NOVENO SEMESTRE": 9,
-  "DÉCIMO SEMESTRE": 10,
-};
+// (SEM_NUM importado de data.js)
 
 // ─────────────────────────────────────────────────────────────
 // PRERREQUISITOS MALLA ANTIGUA 148-1
 // Fuente: prerrequisitos148-1.xlsx
 // ─────────────────────────────────────────────────────────────
-const PREREQ_148_1 = {
-  ANT150: "ANT100", BIO150: "BIO100", CSO150: "CSO101",
-  EST152: "EST121", FIL150: "FIL101", PSI150: "PSI101",
-  BIO200: "BIO150", CSO200: "CSO150", CSO201: "ANT150",
-  INV200: "EST152, FIL150", PSI200: "PSI150",
-  PSI202: "PSI150", PSI203: "PSI150",
-  BIO250: "BIO200", CSO250: "CSO200", INV250: "INV200",
-  PSI254: "PSI200", PSI255: "PSI200",
-  PSI256: "PSI202, PSI203",
-  PSI313: "PSI254, BIO250",
-  CSO350: "CSO300", INV350: "INV300",
-  PSI350: "PSI310", PSI351: "PSI311", PSI352: "PSI312",
-  PSI353: "PSI256, PSI310", PSI354: "PSI313",
-  CSO401: "CSO201, CSO350", INV400: "INV350",
-  PSI400: "PSI350, PSI354", PSI401: "PSI351, PSI353",
-  PSI402: "PSI352",
-  CSO450: "CSO400", CSO451: "CSO401",
-  INV450: "INV400",
-  PSI450: "PSI400", PSI451: "PSI401", PSI452: "PSI402",
-  DEP500: "PSI451", DEP501: "DEP500",
-  CSO452: "CSO451", CSO453: "CSO451", CSO454: "CSO451",
-  CSO455: "CSO452", CSO456: "CSO453", CSO457: "CSO454",
-  PSI500: "PSI450", PSI501: "PSI452", PSI502: "CSO451",
-  PSI503: "PSI500", PSI504: "PSI501", PSI505: "PSI502",
-  PSI600: "PSI450", PSI601: "PSI452", PSI602: "CSO451",
-  PSI603: "PSI600", PSI604: "PSI601", PSI605: "PSI602",
-  PSI700: "PSI450", PSI701: "PSI452", PSI702: "CSO451",
-  PSI703: "PSI700", PSI704: "PSI701", PSI705: "PSI702",
-  DEP13: "DEP012", INF152: "INF151",
-  ANT201: "ANT150", ANT301: "ANT150", ANT302: "ANT150",
-  ANT304: "CSO300", CSA202: "PSI353", CSA203: "CSO250",
-  CSA301: "CSO150", EPS203: "CSO300",
-  PSI552: "PSI353", PSI553: "PSI353", PSI554: "BIO250",
-  PSI555: "PSI353", PSI556: "PSI354",
-  PSI557: "PSI400", PSI558: "CSO401",
-  PSI559: "PSI400", PSI560: "PSI400", PSI561: "PSI400",
-  PSI562: "PSI202",
-  PSI563: "PSI400", PSI564: "PSI400", PSI565: "PSI402",
-  PSI566: "PSI313", PSI567: "CSO250",
-  PSI568: "PSI402", PSI569: "BIO100",
-  SCA204: "CSO150", SCA205: "CSO200",
-  SUI201: "CSO200", SUI302: "CSO201",
-};
+// (Prerrequisitos importados de data.js)
 
 // ─────────────────────────────────────────────────────────────
 // PRERREQUISITOS MALLA NUEVA 148-2
 // Fuente: prerrequisitos148-2.xlsx
 // ─────────────────────────────────────────────────────────────
-const PREREQ_148_2 = {
-  "PSI 212": "PSI 105", "BIO 242": "BIO 141",
-  "CSO 222": "CSO 121", "PSI 213": "PSI 105",
-  "FIL 262": "FIL 161", "INV 232": "INV 131",
-  "PSI 311": "PSI 213", "PSI 314": "PSI 212",
-  "PSI 315": "PSI 212", "PSI 316": "PSI 212",
-  "BIO 343": "BIO 242", "EST 351": "INV 232",
-  "PSI 416": "PSI 311", "PSI 412": "PSI 311, PSI 314",
-  "PSI 414": "PSI 316", "PSI 413": "PSI 315",
-  "BIO 444": "BIO 343", "CSO 425": "CSO 222",
-  "EST 452": "EST 351",
-  "BIO 523": "BIO 444",
-  "PSI 517": "PSI 412", "PSI 518": "PSI 413",
-  "PSI 515": "BIO 444",
-  "CSO 524": "CSO 425", "CSO 525": "ANT 181, CSO 425",
-  "PSI 611": "PSI 515", "PSI 612": "PSI 518, PSI 414",
-  "PSI 614": "CSO 525", "PSI 619": "PSI 515",
-  "PSI 634": "CSO 525", "INV 633": "EST 452, FIL 262",
-  "PSI 711": "PSI 611, PSI 619", "PSI 712": "PSI 611",
-  "PSI 719": "PSI 614", "PSI 714": "CSO 524",
-  "CSO 726": "PSI 634", "INV 734": "INV 633",
-  "PSI 816": "PSI 517", "PSI 815": "PSI 612",
-  "PSI 817": "PSI 712", "PSI 813": "PSI 719",
-  "PSI 811": "PSI 714",
-  "CSO 827": "CSO 726", "INV 835": "INV 734",
-  "PSI 912": "PSI 816", "PSI 918": "PSI 815",
-  "PSI 913": "PSI 817", "PSI 914": "PSI 816",
-  "INV 936": "INV 835", "INV 915": "INV 835",
-  "PSI 916": "PSI 611",
-  "PPP 100": "8vo sem. concluido",
-  "GRL 001": "9no sem. concluido",
-  "GDI 001": "9no sem. concluido",
-  "OPT 001": "PSI 611", "OPT 002": "ANT 181",
-  "OPT 003": "BIO 444", "OPT 004": "CSO 121",
-  "OPT 005": "INV 232", "OPT 006": "CSO 524",
-  "OPT 007": "OPT 006", "OPT 008": "PSI 611",
-  "OPT 009": "CSO 222", "OPT 010": "PSI 611",
-  "OPT 011": "PSI 816",
-};
+// (Prerrequisitos importados de data.js)
 
 // ─────────────────────────────────────────────────────────────
 // 13. CLASIFICACIÓN DEL ESTUDIANTE
@@ -1159,13 +920,34 @@ function getSugerencias(est) {
   });
   pendAntiguaAll.sort((a, b) => a.semNum - b.semNum);
 
+  /* ── Pendientes Extras (Electivas, Talleres) ────────────── */
+  const pendExtra = [];
+  CONVALIDACIONES.forEach((conv) => {
+    const [sigla, nombre, sem, , , , tipo] = conv;
+    if (sem !== "ELECTIVA" && sem !== "TALLER") return;
+    if (tipo === "ELIMINADA") return;
+
+    const nota = est[sigla];
+    const n = nota != null && !isNaN(Number(nota)) ? Number(nota) : null;
+    if (n === null || n < 51) {
+      pendExtra.push({
+        sigla,
+        nombre,
+        semNum: 99, // al final
+        semNombre: sem,
+        tipo,
+        malla: "148-1", // Generalmente se listan bajo la malla antigua
+      });
+    }
+  });
+
   /* ── Armar lista final ───────────────────────────────────── */
   let pool;
   if (plan === "148-1") {
-    pool = pendAntiguaAll;
+    pool = [...pendAntiguaAll, ...pendExtra];
   } else {
-    // 148-2: primero completa nueva malla (1-6), luego antigua (7+)
-    pool = [...pendNueva, ...pendAntigua7];
+    // 148-2: primero completa nueva malla (1-6), luego antigua (7+), luego extras
+    pool = [...pendNueva, ...pendAntigua7, ...pendExtra];
   }
 
   const gestion1 = pool.slice(0, 7);
@@ -1781,6 +1563,47 @@ function actualizarModalMalla() {
           <div class="mm-sem-body">${cards}</div>
         </div>`;
     });
+  }
+
+  // ── SECCIÓN EXTRA: Electivas y Talleres ────────────────────
+  const byExtra = {};
+  CONVALIDACIONES.forEach(r => {
+    const sigla = r[0], nombre = r[1], sem = r[2], tipo = r[6];
+    if (sem !== 'ELECTIVA' && sem !== 'TALLER') return;
+    if (tipo === 'ELIMINADA') return;
+    if (!byExtra[sem]) byExtra[sem] = [];
+    byExtra[sem].push({ sigla, nombre, tipo });
+  });
+
+  let extraCols = '';
+  SECS_EXTRA.forEach(sec => {
+    if (sec.key === 'PRÁCTICAS') return;
+    const mats = byExtra[sec.key] || [];
+    if (mats.length === 0) return;
+
+    const cards = mats.map(m => {
+      const nota = est[m.sigla];
+      const esPend = siglasPool.has(m.sigla);
+      // Solo mostrar si es pendiente para no saturar el modal, o si está seleccionado
+      const sel = sugSeleccion[m.sigla] || null;
+      if (!esPend && !sel && (nota != null && Number(nota) >= 51)) return '';
+
+      return cardMatModal(m.sigla, m.nombre, nota, esPend);
+    }).join('');
+
+    if (!cards) return;
+
+    extraCols += `
+      <div class="mm-sem-col">
+        <div class="mm-sem-header" style="background:${sec.color}18;border-color:${sec.color}50;color:${sec.color}">
+          <span class="mm-sem-num">${sec.label}</span>
+        </div>
+        <div class="mm-sem-body">${cards}</div>
+      </div>`;
+  });
+
+  if (extraCols) {
+    semCols += `<div class="mm-separator"><span>EXTRAS</span></div>` + extraCols;
   }
 
   // Panel inferior: materias seleccionadas como tablas
