@@ -920,40 +920,76 @@ function getSugerencias(est) {
   });
   pendAntiguaAll.sort((a, b) => a.semNum - b.semNum);
 
-  /* ── Pendientes Extras (Electivas, Talleres) ────────────── */
-  const pendExtra = [];
-  CONVALIDACIONES.forEach((conv) => {
-    const [sigla, nombre, sem, , , , tipo] = conv;
-    if (sem !== "ELECTIVA" && sem !== "TALLER") return;
-    if (tipo === "ELIMINADA") return;
+  /* ── Todas las Electivas y Talleres (para el modal) ─────── */
+  const allExtra = [];
+  const processedExtra = new Set();
 
-    const nota = est[sigla];
-    const n = nota != null && !isNaN(Number(nota)) ? Number(nota) : null;
-    if (n === null || n < 51) {
-      pendExtra.push({
-        sigla,
-        nombre,
-        semNum: 99, // al final
-        semNombre: sem,
-        tipo,
-        malla: "148-1", // Generalmente se listan bajo la malla antigua
-      });
+  CONVALIDACIONES.forEach((conv) => {
+    const [siglaAnt, nombreAnt, semAnt, siglaNueva, nombreNueva, semNuevo, tipo] = conv;
+
+    // Detectar si es extra por cualquiera de las dos mallas
+    const esExtraAnt = semAnt === "ELECTIVA" || semAnt === "TALLER";
+    const esExtraNuevo = semNuevo === "ELECTIVA" || semNuevo === "TALLER";
+
+    if (!esExtraAnt && !esExtraNuevo) return;
+
+    // Decidir datos a mostrar según el plan
+    let sigla, nombre, sem, malla;
+    if (plan === "148-2") {
+      // Ocultar extras que solo existen en la malla antigua (como talleres antiguos sin equivalente)
+      if (!siglaNueva) return;
+      
+      sigla = siglaNueva;
+      nombre = nombreNueva;
+      sem = semNuevo;
+      malla = "148-2";
+    } else {
+      sigla = siglaAnt || siglaNueva;
+      nombre = nombreAnt || nombreNueva;
+      sem = semAnt || semNuevo;
+      malla = siglaAnt ? "148-1" : "148-2";
     }
+
+    if (!sigla || processedExtra.has(sigla)) return;
+
+    // Determinar si está aprobada
+    let aprobada = false;
+    if (plan === "148-2" && siglaNueva) {
+      // En 148-2, si hay sigla nueva, checar orígenes
+      const origs = CONVALIDACIONES.filter(c => c[3] === siglaNueva && c[6] !== 'ELIMINADA')
+                                   .map(c => est[c[0]]);
+      aprobada = origs.some(nota => nota != null && !isNaN(Number(nota)) && Number(nota) >= 51);
+    } else {
+      const nota = est[sigla];
+      aprobada = nota != null && !isNaN(Number(nota)) && Number(nota) >= 51;
+    }
+
+    processedExtra.add(sigla);
+    allExtra.push({
+      sigla,
+      nombre,
+      semNum: 99,
+      semNombre: sem,
+      tipo,
+      malla,
+      aprobada
+    });
   });
 
-  /* ── Armar lista final ───────────────────────────────────── */
+  /* ── Armar lista final (solo pendientes para auto-sugerencia) ─ */
+  const pendExtra = allExtra.filter(m => !m.aprobada);
+  
   let pool;
   if (plan === "148-1") {
     pool = [...pendAntiguaAll, ...pendExtra];
   } else {
-    // 148-2: primero completa nueva malla (1-6), luego antigua (7+), luego extras
     pool = [...pendNueva, ...pendAntigua7, ...pendExtra];
   }
 
   const gestion1 = pool.slice(0, 7);
   const gestion2 = pool.slice(7, 14);
 
-  return { plan, maxSemNum, maxSemNombre, totalAprobadas, gestion1, gestion2, pool };
+  return { plan, maxSemNum, maxSemNombre, totalAprobadas, gestion1, gestion2, pool, allExtra };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1098,9 +1134,9 @@ window.imprimirHojaRuta = function () {
   const est = estudianteActual;
   if (!est) return;
 
-  const { plan, totalAprobadas, maxSemNum, pool } = getSugerencias(est);
-  const semActualStr = maxSemNum > 0 ? SEM_NAMES_SUG[maxSemNum] + ' Semestre' : '—';
-  const displayPlan = plan === "148-2" ? "Plan 148-2" : "Plan 148-1";
+  const { plan, maxSemNum, totalAprobadas, pool } = getSugerencias(est);
+  const semActualStr = maxSemNum > 0 ? `${SEM_NAMES_SUG[maxSemNum]} Semestre (${maxSemNum}°)` : "Sin aprobadas";
+  const displayPlan = plan === "148-1" ? "Plan 148-1 (Antigua)" : "Plan 148-2 (Nueva)";
 
   // Reutilizar lógica de agrupación para la malla en el PDF
   let mallaCols = '';
@@ -1368,7 +1404,7 @@ function actualizarModalMalla() {
   const overlay = document.getElementById('modalMallaOverlay');
   if (!overlay || !est) return;
 
-  const { plan } = getSugerencias(est);
+  const { plan, allExtra } = getSugerencias(est);
   const cntG1 = Object.values(sugSeleccion).filter(v => v === 'g1').length;
   const cntG2 = Object.values(sugSeleccion).filter(v => v === 'g2').length;
   const siglasPool = new Set(sugPoolCache.map(m => m.sigla));
@@ -1567,43 +1603,42 @@ function actualizarModalMalla() {
 
   // ── SECCIÓN EXTRA: Electivas y Talleres ────────────────────
   const byExtra = {};
-  CONVALIDACIONES.forEach(r => {
-    const sigla = r[0], nombre = r[1], sem = r[2], tipo = r[6];
-    if (sem !== 'ELECTIVA' && sem !== 'TALLER') return;
-    if (tipo === 'ELIMINADA') return;
-    if (!byExtra[sem]) byExtra[sem] = [];
-    byExtra[sem].push({ sigla, nombre, tipo });
+  allExtra.forEach(m => {
+    if (!byExtra[m.semNombre]) byExtra[m.semNombre] = [];
+    byExtra[m.semNombre].push(m);
   });
 
-  let extraCols = '';
-  SECS_EXTRA.forEach(sec => {
-    if (sec.key === 'PRÁCTICAS') return;
-    const mats = byExtra[sec.key] || [];
-    if (mats.length === 0) return;
+  let extraColsHtml = '';
+  if (Object.keys(byExtra).length > 0) {
+    let electivasHtml = '';
+    let talleresHtml = '';
 
-    const cards = mats.map(m => {
-      const nota = est[m.sigla];
-      const esPend = siglasPool.has(m.sigla);
-      // Solo mostrar si es pendiente para no saturar el modal, o si está seleccionado
-      const sel = sugSeleccion[m.sigla] || null;
-      if (!esPend && !sel && (nota != null && Number(nota) >= 51)) return '';
+    SECS_EXTRA.forEach(sec => {
+      if (sec.key === 'PRÁCTICAS') return;
+      const mats = byExtra[sec.key] || [];
+      if (mats.length === 0) return;
 
-      return cardMatModal(m.sigla, m.nombre, nota, esPend);
-    }).join('');
+      const cards = mats.map(m => {
+        const nota = est[m.sigla];
+        const esPend = siglasPool.has(m.sigla);
+        return cardMatModal(m.sigla, m.nombre, nota, esPend);
+      }).join('');
 
-    if (!cards) return;
+      const gridHtml = `
+        <div class="mm-extra-group">
+          <div class="mm-extra-header">${sec.label}</div>
+          <div class="mm-extras-grid">${cards}</div>
+        </div>`;
+      
+      if (sec.key === 'ELECTIVA') electivasHtml = gridHtml;
+      else if (sec.key === 'TALLER') talleresHtml = gridHtml;
+    });
 
-    extraCols += `
-      <div class="mm-sem-col">
-        <div class="mm-sem-header" style="background:${sec.color}18;border-color:${sec.color}50;color:${sec.color}">
-          <span class="mm-sem-num">${sec.label}</span>
-        </div>
-        <div class="mm-sem-body">${cards}</div>
+    extraColsHtml = `
+      <div class="mm-extras-section">
+        ${electivasHtml}
+        ${talleresHtml}
       </div>`;
-  });
-
-  if (extraCols) {
-    semCols += `<div class="mm-separator"><span>EXTRAS</span></div>` + extraCols;
   }
 
   // Panel inferior: materias seleccionadas como tablas
@@ -1664,6 +1699,7 @@ function actualizarModalMalla() {
           ${semCols}
         </div>
       </div>
+      ${extraColsHtml}
       <div class="mm-bottom-panel">
         ${tablaGestion(selG1, 'g1', 'Gestión 1/2026', cntG1)}
         ${tablaGestion(selG2, 'g2', 'Gestión 2/2026', cntG2)}
