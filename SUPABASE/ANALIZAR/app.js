@@ -471,7 +471,7 @@ function renderMallaAntigua(est) {
       tipo = r[6],
       orden = r[7];
 
-    if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla)) {
+    if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla) && !nombre.startsWith("ABORDAJE")) {
       // Solo incluir si el estudiante tiene la materia aprobada
       const nota = est[sigla];
       const n =
@@ -882,7 +882,7 @@ function getSugerencias(est) {
     const [sigla, nombre, sem, , , , tipo] = conv;
     const semN = SEM_NUM[sem] || 0;
     if (semN < 7) return;
-    if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla)) return;
+    if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla) && !nombre.startsWith("ABORDAJE")) return;
     const nota = est[sigla];
     const n = nota != null && !isNaN(Number(nota)) ? Number(nota) : null;
     if (n === null || n < 51) {
@@ -904,7 +904,7 @@ function getSugerencias(est) {
     const [sigla, nombre, sem, , , , tipo] = conv;
     const semN = SEM_NUM[sem] || 0;
     if (semN < 1) return;
-    if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla)) return;
+    if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla) && !nombre.startsWith("ABORDAJE")) return;
     const nota = est[sigla];
     const n = nota != null && !isNaN(Number(nota)) ? Number(nota) : null;
     if (n === null || n < 51) {
@@ -1175,7 +1175,7 @@ window.imprimirHojaRuta = function () {
       const sigla = r[0], nombre = r[1], sem = r[2], tipo = r[6], orden = r[7];
       const semN = SEM_NUM[sem] || 0;
       if (semN < 7) return;
-      if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla)) {
+      if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla) && !nombre.startsWith("ABORDAJE")) {
         const n = Number(est[sigla]);
         if (isNaN(n) || n < 51) return;
       }
@@ -1259,7 +1259,7 @@ window.imprimirHojaRuta = function () {
     const byKey = {};
     CONVALIDACIONES.forEach(r => {
       const sigla = r[0], nombre = r[1], sem = r[2], tipo = r[6], orden = r[7];
-      if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla)) {
+      if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla) && !nombre.startsWith("ABORDAJE")) {
         const n = Number(est[sigla]);
         if (isNaN(n) || n < 51) return;
       }
@@ -1541,7 +1541,7 @@ function actualizarModalMalla() {
       const sigla = r[0], nombre = r[1], sem = r[2], tipo = r[6], orden = r[7];
       const semN = SEM_NUM[sem] || 0;
       if (semN < 7) return;
-      if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla)) {
+      if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla) && !nombre.startsWith("ABORDAJE")) {
         const nota = est[sigla];
         const n = nota != null && nota !== '' && !isNaN(Number(nota)) ? Number(nota) : null;
         if (n === null || n < 51) return;
@@ -1573,7 +1573,7 @@ function actualizarModalMalla() {
     const byKey = {};
     CONVALIDACIONES.forEach(r => {
       const sigla = r[0], nombre = r[1], sem = r[2], tipo = r[6], orden = r[7];
-      if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla)) {
+      if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla) && !nombre.startsWith("ABORDAJE")) {
         const nota = est[sigla];
         const n = nota != null && nota !== '' && !isNaN(Number(nota)) ? Number(nota) : null;
         if (n === null || n < 51) return;
