@@ -26,6 +26,11 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
 const SIGLAS_SIEMPRE_9_10 = new Set(["DEP500", "DEP501"]);
 // Semestres donde aplica el filtro "solo mostrar si aprobada"
 const SEMS_FILTRO = new Set(["NOVENO SEMESTRE", "DÉCIMO SEMESTRE"]);
+// Materias de abordaje permitidas en la malla de sugerencias
+const ALLOWED_ABORDAJE_SIGLAS = new Set([
+  "PSI500", "PSI501", "PSI502", "PSI503", "PSI504", "PSI505",
+  "PSI600", "PSI601", "PSI602", "PSI603", "PSI604", "PSI605"
+]);
 
 // Índice rápido: siglaAntigua → registro de convalidación
 const CONV_BY_SIGLA = {};
@@ -851,7 +856,8 @@ function getSugerencias(est) {
       semNuevo,
       tipo,
     ] = conv;
-    if (!siglaNueva || tipo === "ELIMINADA") return;
+    if (tipo === "ELIMINADA") return;
+    // No filtrar aquí por ALLOWED_ABORDAJE_SIGLAS para tener el pool completo
     const semN = SEM_NUM[semNuevo] || 0;
     if (semN < 1 || semN > 6) return;
     if (processedNueva.has(siglaNueva)) return;
@@ -882,6 +888,7 @@ function getSugerencias(est) {
     const [sigla, nombre, sem, , , , tipo] = conv;
     const semN = SEM_NUM[sem] || 0;
     if (semN < 7) return;
+    // No filtrar aquí tampoco
     if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla) && !nombre.startsWith("ABORDAJE")) return;
     const nota = est[sigla];
     const n = nota != null && !isNaN(Number(nota)) ? Number(nota) : null;
@@ -904,6 +911,7 @@ function getSugerencias(est) {
     const [sigla, nombre, sem, , , , tipo] = conv;
     const semN = SEM_NUM[sem] || 0;
     if (semN < 1) return;
+    // No filtrar aquí tampoco
     if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla) && !nombre.startsWith("ABORDAJE")) return;
     const nota = est[sigla];
     const n = nota != null && !isNaN(Number(nota)) ? Number(nota) : null;
@@ -938,7 +946,7 @@ function getSugerencias(est) {
     if (plan === "148-2") {
       // Ocultar extras que solo existen en la malla antigua (como talleres antiguos sin equivalente)
       if (!siglaNueva) return;
-      
+
       sigla = siglaNueva;
       nombre = nombreNueva;
       sem = semNuevo;
@@ -957,7 +965,7 @@ function getSugerencias(est) {
     if (plan === "148-2" && siglaNueva) {
       // En 148-2, si hay sigla nueva, checar orígenes
       const origs = CONVALIDACIONES.filter(c => c[3] === siglaNueva && c[6] !== 'ELIMINADA')
-                                   .map(c => est[c[0]]);
+        .map(c => est[c[0]]);
       aprobada = origs.some(nota => nota != null && !isNaN(Number(nota)) && Number(nota) >= 51);
     } else {
       const nota = est[sigla];
@@ -976,20 +984,34 @@ function getSugerencias(est) {
     });
   });
 
-  /* ── Armar lista final (solo pendientes para auto-sugerencia) ─ */
+  /* ── Armar listas finales ────────────────────────────────── */
   const pendExtra = allExtra.filter(m => !m.aprobada);
-  
-  let pool;
-  if (plan === "148-1") {
-    pool = [...pendAntiguaAll, ...pendExtra];
-  } else {
-    pool = [...pendNueva, ...pendAntigua7, ...pendExtra];
-  }
 
-  const gestion1 = pool.slice(0, 7);
-  const gestion2 = pool.slice(7, 14);
+  const fullPool = plan === "148-1"
+    ? [...pendAntiguaAll, ...pendExtra]
+    : [...pendNueva, ...pendAntigua7, ...pendExtra];
 
-  return { plan, maxSemNum, maxSemNombre, totalAprobadas, gestion1, gestion2, pool, allExtra };
+  // filteredPool: solo Abordaje permitidas + Talleres/Electivas (autosugerencia)
+  const filteredPool = fullPool.filter(m => {
+    const isAbordaje = ALLOWED_ABORDAJE_SIGLAS.has(m.sigla);
+    const isExtra = m.semNombre === "TALLER" || m.semNombre === "ELECTIVA";
+    return isAbordaje || isExtra;
+  });
+
+  const gestion1 = filteredPool.slice(0, 7);
+  const gestion2 = []; // Restricted to G1 only per user request
+
+  return {
+    plan,
+    maxSemNum,
+    maxSemNombre,
+    totalAprobadas,
+    gestion1,
+    gestion2,
+    pool: filteredPool,
+    fullPool,
+    allExtra
+  };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -998,7 +1020,8 @@ function getSugerencias(est) {
 
 let sugSeleccion = {};
 let sugEstActual = null;
-let sugPoolCache = [];
+let sugPoolCache = []; // Almacenará el fullPool
+let sugFilteredCache = []; // Almacenará el pool filtrado
 
 const SEM_NAMES_SUG = ["", "Primer", "Segundo", "Tercer", "Cuarto",
   "Quinto", "Sexto", "Séptimo", "Octavo", "Noveno", "Décimo"];
@@ -1016,28 +1039,18 @@ function inicializarSeleccion(est, pool) {
     g1Saved.forEach(sigla => { sugSeleccion[sigla] = 'g1'; });
     g2Saved.forEach(sigla => { sugSeleccion[sigla] = 'g2'; });
   } else {
-    // Auto-sugerencia por defecto
+    // Auto-sugerencia solo G1 (hasta 7 materias)
     pool.slice(0, 7).forEach(m => { sugSeleccion[m.sigla] = 'g1'; });
-    pool.slice(7, 14).forEach(m => { sugSeleccion[m.sigla] = 'g2'; });
   }
 }
 
-/* Clic en card pendiente: cicla none → g1 → g2 → none */
+/* Clic en card pendiente: cicla none → g1 → none */
 window.sugCiclar = function (sigla) {
   const actual = sugSeleccion[sigla] || null;
   if (actual === null) {
     const cG1 = Object.values(sugSeleccion).filter(v => v === 'g1').length;
-    if (cG1 >= 7) {
-      const cG2 = Object.values(sugSeleccion).filter(v => v === 'g2').length;
-      if (cG2 >= 7) { alert('Ambas gestiones están llenas (7/7).'); return; }
-      sugSeleccion[sigla] = 'g2';
-    } else {
-      sugSeleccion[sigla] = 'g1';
-    }
-  } else if (actual === 'g1') {
-    const cG2 = Object.values(sugSeleccion).filter(v => v === 'g2').length;
-    if (cG2 >= 7) { sugSeleccion[sigla] = null; }
-    else { sugSeleccion[sigla] = 'g2'; }
+    if (cG1 >= 7) { alert('La gestión 1/2026 ya está llena (7/7).'); return; }
+    sugSeleccion[sigla] = 'g1';
   } else {
     sugSeleccion[sigla] = null;
   }
@@ -1054,8 +1067,9 @@ window.sugQuitar = function (sigla) {
 window.abrirModalMalla = function () {
   const est = estudianteActual;
   if (!est) return;
-  const { pool } = getSugerencias(est);
-  sugPoolCache = pool;
+  const { pool, fullPool } = getSugerencias(est);
+  sugPoolCache = fullPool; // Usar el pool completo para clickeabilidad
+  sugFilteredCache = pool;
   inicializarSeleccion(est, pool);
 
   let overlay = document.getElementById('modalMallaOverlay');
@@ -1134,7 +1148,7 @@ window.imprimirHojaRuta = function () {
   const est = estudianteActual;
   if (!est) return;
 
-  const { plan, maxSemNum, totalAprobadas, pool } = getSugerencias(est);
+  const { plan, maxSemNum, totalAprobadas, pool, fullPool } = getSugerencias(est);
   const semActualStr = maxSemNum > 0 ? `${SEM_NAMES_SUG[maxSemNum]} Semestre (${maxSemNum}°)` : "Sin aprobadas";
   const displayPlan = plan === "148-1" ? "Plan 148-1 (Antigua)" : "Plan 148-2 (Nueva)";
 
@@ -1302,11 +1316,10 @@ window.imprimirHojaRuta = function () {
     });
   }
 
-  // Tablas de selección G1/G2
+  // Tablas de selección G1
   const selG1 = Object.entries(sugSeleccion).filter(([, v]) => v === 'g1').map(([s]) => s);
-  const selG2 = Object.entries(sugSeleccion).filter(([, v]) => v === 'g2').map(([s]) => s);
   const siglaToNombreMap = {};
-  pool.forEach(m => { siglaToNombreMap[m.sigla] = m.nombre; });
+  fullPool.forEach(m => { siglaToNombreMap[m.sigla] = m.nombre; });
 
   function tablaImpresion(titulo, lista, colorBg) {
     let filas = lista.map((sigla, i) => {
@@ -1370,16 +1383,14 @@ window.imprimirHojaRuta = function () {
     <div class="leg-item"><span class="leg-dot" style="background:#fee2e2;border-color:#dc2626"></span> Reprobada</div>
     <div class="leg-item"><span class="leg-dot" style="background:#fef9c3;border-color:#f59e0b"></span> Pendiente</div>
     <div class="leg-item"><span class="leg-dot" style="background:#dbeafe;border-color:#1e3a8a"></span> G1/2026</div>
-    <div class="leg-item"><span class="leg-dot" style="background:#ede9fe;border-color:#6d28d9"></span> G2/2026</div>
   </div>
 
   <div class="section-title">CONTROL DE AVANCE ACADÉMICO</div>
   <table class="malla-table"><tr>${mallaCols}</tr></table>
 
-  <div class="section-title">MATERIAS SUGERIDAS PARA GESTIÓN 2026</div>
+  <div class="section-title">MATERIAS SUGERIDAS PARA GESTIÓN 1/2026</div>
   <div class="sel-wrap">
     ${tablaImpresion('Gestión 1/2026', selG1, '#1e3a8a')}
-    ${tablaImpresion('Gestión 2/2026', selG2, '#6d28d9')}
   </div>
 
   <div class="footer">Este documento es una guía académica sugerida generada el ${fechaHoy}.</div>
@@ -1404,14 +1415,13 @@ function actualizarModalMalla() {
   const overlay = document.getElementById('modalMallaOverlay');
   if (!overlay || !est) return;
 
-  const { plan, allExtra } = getSugerencias(est);
+  const { plan, allExtra, fullPool } = getSugerencias(est);
   const cntG1 = Object.values(sugSeleccion).filter(v => v === 'g1').length;
-  const cntG2 = Object.values(sugSeleccion).filter(v => v === 'g2').length;
-  const siglasPool = new Set(sugPoolCache.map(m => m.sigla));
+  const siglasPool = new Set(fullPool.map(m => m.sigla));
 
   // Map sigla → nombre para tablas inferiores
   const siglaToNombre = {};
-  sugPoolCache.forEach(m => { siglaToNombre[m.sigla] = m.nombre; });
+  fullPool.forEach(m => { siglaToNombre[m.sigla] = m.nombre; });
 
   // ── Helper: card de materia en el modal ──────────────────────
   function cardMatModal(sigla, nombre, notaVal, esPendientePool, type = 'antigua', origs = []) {
@@ -1629,7 +1639,7 @@ function actualizarModalMalla() {
           <div class="mm-extra-header">${sec.label}</div>
           <div class="mm-extras-grid">${cards}</div>
         </div>`;
-      
+
       if (sec.key === 'ELECTIVA') electivasHtml = gridHtml;
       else if (sec.key === 'TALLER') talleresHtml = gridHtml;
     });
@@ -1643,7 +1653,6 @@ function actualizarModalMalla() {
 
   // Panel inferior: materias seleccionadas como tablas
   const selG1 = Object.entries(sugSeleccion).filter(([, v]) => v === 'g1').map(([s]) => s);
-  const selG2 = Object.entries(sugSeleccion).filter(([, v]) => v === 'g2').map(([s]) => s);
 
   function tablaGestion(lista, gest, titulo, cnt) {
     const colorCls = gest === 'g1' ? 'mm-tbl-g1' : 'mm-tbl-g2';
@@ -1678,9 +1687,6 @@ function actualizarModalMalla() {
           <span class="sug-counter ${cntG1 >= 7 ? 'sug-counter-full' : ''}">
             <i class="fa-solid fa-calendar-days sug-g1-icon"></i> G1: <b>${cntG1}</b>/7
           </span>
-          <span class="sug-counter ${cntG2 >= 7 ? 'sug-counter-full' : ''}">
-            <i class="fa-solid fa-calendar-days sug-g2-icon"></i> G2: <b>${cntG2}</b>/7
-          </span>
         </div>
         <button class="mm-close" onclick="cerrarModalMalla()">
           <i class="fa-solid fa-xmark"></i>
@@ -1691,7 +1697,6 @@ function actualizarModalMalla() {
         <span class="mm-leg-item"><span class="mm-dot mm-dot-fail"></span> Reprobada</span>
         <span class="mm-leg-item"><span class="mm-dot mm-dot-pend"></span> Pendiente</span>
         <span class="mm-leg-item"><span class="mm-dot mm-dot-g1"></span> G1/2026</span>
-        <span class="mm-leg-item"><span class="mm-dot mm-dot-g2"></span> G2/2026</span>
         <span class="mm-leg-item"><i class="fa-solid fa-hand-pointer"></i> Clic para asignar</span>
       </div>
       <div class="mm-malla-scroll">
@@ -1702,7 +1707,6 @@ function actualizarModalMalla() {
       ${extraColsHtml}
       <div class="mm-bottom-panel">
         ${tablaGestion(selG1, 'g1', 'Gestión 1/2026', cntG1)}
-        ${tablaGestion(selG2, 'g2', 'Gestión 2/2026', cntG2)}
         <div class="mm-panel-actions">
           <button class="mm-btn-print" onclick="imprimirHojaRuta()">
             <i class="fa-solid fa-print"></i> Imprimir PDF
@@ -1718,8 +1722,10 @@ function actualizarModalMalla() {
 /* ── renderSugerencias: solo modo VISTA ─────────────────────── */
 function renderSugerencias(est) {
   const container = document.getElementById("contentSug");
-  const { plan, maxSemNum, totalAprobadas, gestion1: autoG1,
-    gestion2: autoG2, pool } = getSugerencias(est);
+  if (!container || !est) return;
+
+  const dataS = getSugerencias(est);
+  const { plan, maxSemNum, totalAprobadas, gestion1: autoG1, pool, fullPool } = dataS;
 
   inicializarSeleccion(est, pool);
 
@@ -1734,13 +1740,17 @@ function renderSugerencias(est) {
     ? `<div class="sug-notice">⚠️ <b>Plan 148-2:</b> Nueva malla hasta 6°. Desde 7° continúa con 148-1.</div>`
     : `<div class="sug-notice sug-notice-ok">✔ <b>Plan 148-1:</b> Permanece en Malla Antigua.</div>`;
 
-  // Usar selección personalizada si hay
-  const g1 = pool.filter(m => sugSeleccion[m.sigla] === 'g1');
-  const g2 = pool.filter(m => sugSeleccion[m.sigla] === 'g2');
-  const useG1 = g1.length > 0 || g2.length > 0 ? g1 : autoG1;
-  const useG2 = g1.length > 0 || g2.length > 0 ? g2 : autoG2;
+  // Determinamos qué mostrar en G1
+  // 1. Ver qué tenemos seleccionado en sugSeleccion para 'g1'
+  let useG1 = (fullPool || []).filter(m => sugSeleccion[m.sigla] === 'g1');
+
+  // 2. Si no hay nada seleccionado manualmente (ni guardado), usamos la autosugerencia
+  if (useG1.length === 0) {
+    useG1 = [...(autoG1 || [])];
+  }
 
   function cardMat(m) {
+    if (!m) return '';
     const mallaCls = m.malla === "148-1" ? "sug-card-antigua" : "sug-card-nueva";
     const mallaIcon = m.malla === "148-1"
       ? '<i class="fa-solid fa-book"></i>' : '<i class="fa-solid fa-book-open"></i>';
@@ -1755,13 +1765,13 @@ function renderSugerencias(est) {
   }
 
   function colGestion(titulo, colorCls, mats) {
-    const items = mats.length
+    const items = (mats && mats.length)
       ? mats.map(cardMat).join("")
       : `<div class="sug-empty"><i class="fa-solid fa-circle-check"></i> Sin materias</div>`;
     return `<div class="sug-col">
       <div class="sug-col-head ${colorCls}">
         <span><i class="fa-solid fa-calendar-days"></i> ${titulo}</span>
-        <span class="sug-count">${mats.length} / 7</span>
+        <span class="sug-count">${(mats || []).length} / 7</span>
       </div>
       <div class="sug-col-body">${items}</div>
     </div>`;
@@ -1784,10 +1794,9 @@ function renderSugerencias(est) {
       </div>
       <div class="sug-columns">
         ${colGestion("Gestión 1/2026", "sug-head-g1", useG1)}
-        ${colGestion("Gestión 2/2026", "sug-head-g2", useG2)}
       </div>
-      ${useG1.length + useG2.length === 0
-      ? '<div class="sug-notice sug-notice-ok">🎉 ¡Sin materias pendientes!</div>'
+      ${useG1.length === 0
+      ? '<div class="sug-notice sug-notice-ok">🎉 ¡Sin materias pendientes que sugerir!</div>'
       : ''}
     </div>`;
 }
