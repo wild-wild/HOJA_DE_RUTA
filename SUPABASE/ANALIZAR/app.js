@@ -1006,6 +1006,11 @@ function getSugerencias(est) {
     }
   });
 
+  // autoPool: basado en el PLAN ACTUAL del estudiante (para las que "siguen" por defecto)
+  const autoPool = plan === "148-1"
+    ? [...pendAntiguaAll, ...pendExtra]
+    : [...pendNueva, ...pendAntigua7, ...pendExtra];
+
   // filteredPool: UNIFICADO para mostrar todas las Abordaje y Extras de ambas mallas
   const filteredPool = fullPool.filter(m => {
     const isAbordaje = m.nombre && m.nombre.toUpperCase().includes("ABORDAJE");
@@ -1013,7 +1018,7 @@ function getSugerencias(est) {
     return isAbordaje || isExtra;
   });
 
-  const gestion1 = filteredPool.slice(0, 7);
+  const gestion1 = autoPool.slice(0, 7);
   const gestion2 = []; // Restricted to G1 only per user request
 
   return {
@@ -1082,10 +1087,10 @@ window.sugQuitar = function (sigla) {
 window.abrirModalMalla = function () {
   const est = estudianteActual;
   if (!est) return;
-  const { pool, fullPool } = getSugerencias(est);
+  const { pool, fullPool, gestion1: autoG1 } = getSugerencias(est);
   sugPoolCache = fullPool; // Usar el pool completo para clickeabilidad
   sugFilteredCache = pool;
-  inicializarSeleccion(est, pool);
+  inicializarSeleccion(est, autoG1);
 
   let overlay = document.getElementById('modalMallaOverlay');
   if (!overlay) {
@@ -1643,7 +1648,7 @@ function renderSugerencias(est) {
   const dataS = getSugerencias(est);
   const { plan, maxSemNum, totalAprobadas, gestion1: autoG1, pool, fullPool } = dataS;
 
-  inicializarSeleccion(est, pool);
+  inicializarSeleccion(est, autoG1);
 
   const semActualStr = maxSemNum > 0
     ? `${SEM_NAMES_SUG[maxSemNum]} Semestre (${maxSemNum}°)` : "Sin aprobadas";
