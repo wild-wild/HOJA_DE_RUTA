@@ -1607,6 +1607,18 @@ body {
   min-width: max-content;
 }
 
+.mm-malla-section-title {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #1e3a8a;
+  padding: 0.5rem 0.8rem;
+  background: #f1f5f9;
+  border-left: 4px solid #1e3a8a;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 /* ── Columna de semestre ───────────────────────────────────── */
 .mm-sem-col {
   min-width: 135px;

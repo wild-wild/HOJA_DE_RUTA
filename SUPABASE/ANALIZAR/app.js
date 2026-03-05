@@ -34,8 +34,11 @@ const ALLOWED_ABORDAJE_SIGLAS = new Set([
 
 // Índice rápido: siglaAntigua → registro de convalidación
 const CONV_BY_SIGLA = {};
+const siglaToNombre = {}; // Map para nombres rápidos
 CONVALIDACIONES.forEach((r) => {
   CONV_BY_SIGLA[r[0]] = r;
+  if (r[0]) siglaToNombre[r[0]] = r[1]; // Antigua
+  if (r[3]) siglaToNombre[r[3]] = r[4]; // Nueva
 });
 
 // ─────────────────────────────────────────────────────────────
@@ -888,8 +891,10 @@ function getSugerencias(est) {
     const [sigla, nombre, sem, , , , tipo] = conv;
     const semN = SEM_NUM[sem] || 0;
     if (semN < 7) return;
-    // No filtrar aquí tampoco
-    if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla) && !nombre.startsWith("ABORDAJE")) return;
+
+    const isAbordaje = nombre && nombre.toUpperCase().includes("ABORDAJE");
+    if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla) && !isAbordaje) return;
+
     const nota = est[sigla];
     const n = nota != null && !isNaN(Number(nota)) ? Number(nota) : null;
     if (n === null || n < 51) {
@@ -911,8 +916,10 @@ function getSugerencias(est) {
     const [sigla, nombre, sem, , , , tipo] = conv;
     const semN = SEM_NUM[sem] || 0;
     if (semN < 1) return;
-    // No filtrar aquí tampoco
-    if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla) && !nombre.startsWith("ABORDAJE")) return;
+
+    const isAbordaje = nombre && nombre.toUpperCase().includes("ABORDAJE");
+    if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla) && !isAbordaje) return;
+
     const nota = est[sigla];
     const n = nota != null && !isNaN(Number(nota)) ? Number(nota) : null;
     if (n === null || n < 51) {
@@ -987,13 +994,21 @@ function getSugerencias(est) {
   /* ── Armar listas finales ────────────────────────────────── */
   const pendExtra = allExtra.filter(m => !m.aprobada);
 
-  const fullPool = plan === "148-1"
-    ? [...pendAntiguaAll, ...pendExtra]
-    : [...pendNueva, ...pendAntigua7, ...pendExtra];
+  // fullPool UNIFICADO: Todas las pendientes de ambas mallas para permitir selección cruzada
+  // Usamos un Set para evitar duplicados por sigla
+  const seenSiglasPool = new Set();
+  const fullPool = [];
 
-  // filteredPool: solo Abordaje permitidas + Talleres/Electivas (autosugerencia)
+  [...pendNueva, ...pendAntiguaAll, ...pendExtra].forEach(m => {
+    if (!seenSiglasPool.has(m.sigla)) {
+      seenSiglasPool.add(m.sigla);
+      fullPool.push(m);
+    }
+  });
+
+  // filteredPool: UNIFICADO para mostrar todas las Abordaje y Extras de ambas mallas
   const filteredPool = fullPool.filter(m => {
-    const isAbordaje = ALLOWED_ABORDAJE_SIGLAS.has(m.sigla);
+    const isAbordaje = m.nombre && m.nombre.toUpperCase().includes("ABORDAJE");
     const isExtra = m.semNombre === "TALLER" || m.semNombre === "ELECTIVA";
     return isAbordaje || isExtra;
   });
@@ -1148,48 +1163,37 @@ window.imprimirHojaRuta = function () {
   const est = estudianteActual;
   if (!est) return;
 
-  const { plan, maxSemNum, totalAprobadas, pool, fullPool } = getSugerencias(est);
+  const { plan, maxSemNum, totalAprobadas } = getSugerencias(est);
   const semActualStr = maxSemNum > 0 ? `${SEM_NAMES_SUG[maxSemNum]} Semestre (${maxSemNum}°)` : "Sin aprobadas";
   const displayPlan = plan === "148-1" ? "Plan 148-1 (Antigua)" : "Plan 148-2 (Nueva)";
 
-  // Reutilizar lógica de agrupación para la malla en el PDF
-  let mallaCols = '';
-
-  if (plan === '148-2') {
-    // ── PLAN 148-2: Malla Nueva (1-6) + Antigua (7-10) ────────
-    const SEMS_NUEVA = [
-      { key: "PRIMER SEMESTRE", label: "1° N", color: "#1d4ed8" },
-      { key: "SEGUNDO SEMESTRE", label: "2° N", color: "#1e40af" },
-      { key: "TERCER SEMESTRE", label: "3° N", color: "#1a56db" },
-      { key: "CUARTO SEMESTRE", label: "4° N", color: "#6d28d9" },
-      { key: "QUINTO SEMESTRE", label: "5° N", color: "#7c3aed" },
-      { key: "SEXTO SEMESTRE", label: "6° N", color: "#a21caf" }
-    ];
-    const SEMS_ANT_7PLUS = [
-      { key: "SÉPTIMO SEMESTRE", label: "7°", color: "#be185d" },
-      { key: "OCTAVO SEMESTRE", label: "8°", color: "#b91c1c" },
-      { key: "NOVENO SEMESTRE", label: "9°", color: "#92400e" },
-      { key: "DÉCIMO SEMESTRE", label: "10°", color: "#065f46" }
-    ];
+  /* ── Helper: Renderizar Grid para PDF ───────────────────── */
+  function renderGridPDF(mallaType) {
+    const isNueva = mallaType === '148-2';
+    let colsHtml = '';
 
     const byNueva = {};
-    CONVALIDACIONES.forEach(conv => {
-      const [siglaAnt, , , siglaNueva, nombreNueva, semNuevo, tipo] = conv;
-      if (!siglaNueva || tipo === 'ELIMINADA') return;
-      const k = semNuevo || 'ELECTIVA';
-      if (!byNueva[k]) byNueva[k] = {};
-      if (!byNueva[k][siglaNueva]) {
-        byNueva[k][siglaNueva] = { siglaNueva, nombreNueva, tipo, origs: [] };
-      }
-      byNueva[k][siglaNueva].origs.push({ siglaAnt, nombreAnt: conv[1], nota: est[siglaAnt] });
-    });
+    if (isNueva) {
+      CONVALIDACIONES.forEach(conv => {
+        const [siglaAnt, , , siglaNueva, nombreNueva, semNuevo, tipo] = conv;
+        if (!siglaNueva || tipo === 'ELIMINADA') return;
+        const k = semNuevo || 'ELECTIVA';
+        if (!byNueva[k]) byNueva[k] = {};
+        if (!byNueva[k][siglaNueva]) {
+          byNueva[k][siglaNueva] = { sigla: siglaNueva, nombre: nombreNueva, tipo, origs: [] };
+        }
+        byNueva[k][siglaNueva].origs.push({ siglaAnt, nota: est[siglaAnt] });
+      });
+    }
 
     const byAnt = {};
     CONVALIDACIONES.forEach(r => {
-      const sigla = r[0], nombre = r[1], sem = r[2], tipo = r[6], orden = r[7];
-      const semN = SEM_NUM[sem] || 0;
-      if (semN < 7) return;
-      if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla) && !nombre.startsWith("ABORDAJE")) {
+      const [sigla, nombre, sem, , , , tipo, orden] = r;
+      if (!sigla || tipo === 'ELIMINADA' || sem === 'ELECTIVA' || sem === 'TALLER' || sem === 's/n') return;
+
+      const isAbordaje = nombre && nombre.startsWith("ABORDAJE");
+
+      if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla) && !isAbordaje) {
         const n = Number(est[sigla]);
         if (isNaN(n) || n < 51) return;
       }
@@ -1197,44 +1201,36 @@ window.imprimirHojaRuta = function () {
       byAnt[sem].push({ sigla, nombre, tipo, orden });
     });
 
-    // Renderizar las 10 columnas (6 nuevas + 4 antiguas)
-    [...SEMS_NUEVA, ...SEMS_ANT_7PLUS].forEach((sec, idx) => {
+    SECS_SEMESTRES.forEach(sec => {
       let content = '';
-      if (idx < 6) {
-        // Malla Nueva
-        const items = Object.values(byNueva[sec.key] || {});
-        items.forEach(it => {
+      const sNum = SEM_NUM[sec.key] || 0;
+
+      if (isNueva && sNum <= 6) {
+        Object.values(byNueva[sec.key] || {}).forEach(it => {
           const res = it.origs.reduce((best, o) => {
             const n = o.nota != null && !isNaN(Number(o.nota)) ? Number(o.nota) : null;
-            return n !== null && (best === null || n > best) ? n : best;
+            return (n !== null && (best === null || n > best)) ? n : best;
           }, null);
           const aprobada = res !== null && res >= 51;
           const reprobada = res !== null && res < 51;
-          const sel = sugSeleccion[it.siglaNueva] || null;
+          const sel = sugSeleccion[it.sigla] || null;
 
           let bg, borderCol, color, notaStr, badge = '';
           if (aprobada) { bg = '#dcfce7'; borderCol = '#16a34a'; color = '#15803d'; notaStr = '✓'; }
           else if (reprobada) { bg = '#fee2e2'; borderCol = '#dc2626'; color = '#dc2626'; notaStr = '✗'; }
           else if (sel === 'g1') { bg = '#dbeafe'; borderCol = '#1e3a8a'; color = '#1e3a8a'; notaStr = ''; badge = '<span style="background:#1e3a8a;color:#fff;font-size:5px;padding:0 2px;border-radius:2px;margin-left:2px">G1</span>'; }
-          else if (sel === 'g2') { bg = '#ede9fe'; borderCol = '#6d28d9'; color = '#6d28d9'; notaStr = ''; badge = '<span style="background:#6d28d9;color:#fff;font-size:5px;padding:0 2px;border-radius:2px;margin-left:2px">G2</span>'; }
           else { bg = '#f8fafc'; borderCol = '#cbd5e1'; color = '#64748b'; notaStr = 'PEND'; }
 
-          const origText = it.origs.map(o => `<div style="font-size:4.5px;line-height:1">${o.nombreAnt || o.siglaAnt} - <b>${o.siglaAnt}</b></div>`).join('');
-
-          content += `<div style="padding:2px;border:1px solid ${borderCol};border-radius:2px;font-size:6.5px;background:${bg};margin-bottom:2px">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1px">
-              <b>${it.siglaNueva}</b>${badge}
-              <span style="color:${color};font-weight:700;font-size:6px">${notaStr}</span>
+          const origText = it.origs.map(o => o.siglaAnt).join(', ');
+          content += `<div style="padding:2px;border:1px solid ${borderCol};border-radius:2px;font-size:6px;background:${bg};margin-bottom:2px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <b>${it.sigla}</b>${badge} <span style="color:${color};font-weight:700">${notaStr}</span>
             </div>
-            <div style="font-size:5.5px;font-weight:600;line-height:1.1">${it.nombreNueva}</div>
-            <div style="margin-top:2px;border-top:1px solid ${borderCol}40;padding-top:1px">
-              <span style="font-size:4.5px;color:#6b7280;display:block">antes:</span>
-              ${origText}
-            </div>
+            <div style="font-size:5px;font-weight:600;line-height:1">${it.nombre}</div>
+            <div style="font-size:4px;color:#9ca3af">Orig: ${origText}</div>
           </div>`;
         });
       } else {
-        // Malla Antigua (7-10)
         const mats = byAnt[sec.key] || [];
         mats.sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
         mats.forEach(m => {
@@ -1247,154 +1243,101 @@ window.imprimirHojaRuta = function () {
           if (aprobada) { bg = '#dcfce7'; borderCol = '#16a34a'; color = '#15803d'; notaStr = '✓'; }
           else if (reprobada) { bg = '#fee2e2'; borderCol = '#dc2626'; color = '#dc2626'; notaStr = '✗'; }
           else if (sel === 'g1') { bg = '#dbeafe'; borderCol = '#1e3a8a'; color = '#1e3a8a'; notaStr = ''; badge = '<span style="background:#1e3a8a;color:#fff;font-size:5px;padding:0 2px;border-radius:2px;margin-left:2px">G1</span>'; }
-          else if (sel === 'g2') { bg = '#ede9fe'; borderCol = '#6d28d9'; color = '#6d28d9'; notaStr = ''; badge = '<span style="background:#6d28d9;color:#fff;font-size:5px;padding:0 2px;border-radius:2px;margin-left:2px">G2</span>'; }
           else { bg = '#fef9c3'; borderCol = '#f59e0b'; color = '#92400e'; notaStr = 'PEND'; }
 
-          content += `<div style="padding:2px;border:1px solid ${borderCol};border-radius:2px;font-size:6.5px;background:${bg};margin-bottom:2px">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1px">
-              <b>${m.sigla}</b>${badge}
-              <span style="color:${color};font-weight:700;font-size:6px">${notaStr}</span>
+          content += `<div style="padding:2px;border:1px solid ${borderCol};border-radius:2px;font-size:6px;background:${bg};margin-bottom:2px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <b>${m.sigla}</b>${badge} <span style="color:${color};font-weight:700">${notaStr}</span>
             </div>
-            <div style="font-size:5.5px;font-weight:600;line-height:1.1">${m.nombre}</div>
+            <div style="font-size:5px;font-weight:600;line-height:1">${m.nombre}</div>
           </div>`;
         });
       }
 
-      mallaCols += `<td style="vertical-align:top;width:10%;padding:1px">
-        <div style="background:${sec.color}15;border:1px solid ${sec.color}40;color:${sec.color};border-radius:2px;padding:1px;font-size:6px;font-weight:800;text-align:center;margin-bottom:2px">
+      colsHtml += `<td style="vertical-align:top;width:10%;padding:1px">
+        <div style="background:${sec.color}15;border:1px solid ${sec.color}40;color:${sec.color};border-radius:2px;padding:1px;font-size:5.5px;font-weight:800;text-align:center;margin-bottom:2px">
           ${sec.label}
         </div>
         ${content}
       </td>`;
     });
-
-  } else {
-    // ── PLAN 148-1: Malla Antigua Completa (10 columnas) ──────
-    const byKey = {};
-    CONVALIDACIONES.forEach(r => {
-      const sigla = r[0], nombre = r[1], sem = r[2], tipo = r[6], orden = r[7];
-      if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla) && !nombre.startsWith("ABORDAJE")) {
-        const n = Number(est[sigla]);
-        if (isNaN(n) || n < 51) return;
-      }
-      if (!byKey[sem]) byKey[sem] = [];
-      byKey[sem].push({ sigla, nombre, tipo, orden });
-    });
-
-    SECS_SEMESTRES.forEach(sec => {
-      const mats = byKey[sec.key] || [];
-      mats.sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
-      let matRows = '';
-      mats.forEach(m => {
-        const n = Number(est[m.sigla]);
-        const aprobada = !isNaN(n) && n >= 51;
-        const reprobada = !isNaN(n) && n < 51;
-        const sel = sugSeleccion[m.sigla] || null;
-
-        let bg, borderCol, color, notaStr, badge = '';
-        if (aprobada) { bg = '#dcfce7'; borderCol = '#16a34a'; color = '#15803d'; notaStr = '✓'; }
-        else if (reprobada) { bg = '#fee2e2'; borderCol = '#dc2626'; color = '#dc2626'; notaStr = '✗'; }
-        else if (sel === 'g1') { bg = '#dbeafe'; borderCol = '#1e3a8a'; color = '#1e3a8a'; notaStr = ''; badge = '<span style="background:#1e3a8a;color:#fff;font-size:5px;padding:0 2px;border-radius:2px;margin-left:2px">G1</span>'; }
-        else if (sel === 'g2') { bg = '#ede9fe'; borderCol = '#6d28d9'; color = '#6d28d9'; notaStr = ''; badge = '<span style="background:#6d28d9;color:#fff;font-size:5px;padding:0 2px;border-radius:2px;margin-left:2px">G2</span>'; }
-        else if (m.tipo === 'ELIMINADA') { bg = '#f3f4f6'; borderCol = '#d1d5db'; color = '#9ca3af'; notaStr = 'ELIM'; }
-        else { bg = '#fef9c3'; borderCol = '#f59e0b'; color = '#92400e'; notaStr = 'PEND'; }
-
-        matRows += `<div style="padding:2px;border:1px solid ${borderCol};border-radius:2px;font-size:6.5px;background:${bg};margin-bottom:2px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1px">
-            <b>${m.sigla}</b>${badge}
-            <span style="color:${color};font-weight:700;font-size:6px">${notaStr}</span>
-          </div>
-          <div style="font-size:5.5px;font-weight:600;line-height:1.1">${m.nombre}</div>
-        </div>`;
-      });
-      mallaCols += `<td style="vertical-align:top;width:10%;padding:1px">
-        <div style="background:${sec.color}15;border:1px solid ${sec.color}40;color:${sec.color};border-radius:2px;padding:1px;font-size:6px;font-weight:800;text-align:center;margin-bottom:2px">
-          ${sec.label}
-        </div>
-        ${matRows}
-      </td>`;
-    });
+    return `<table style="width:100%;border-collapse:collapse;margin-bottom:10px"><tr>${colsHtml}</tr></table>`;
   }
 
-  // Tablas de selección G1
+  const mallaAntiguaHtml = `
+    <div style="font-size:8px;font-weight:800;color:#1e3a8a;background:#f1f5f9;padding:2px 5px;border-left:3px solid #1e3a8a;margin-bottom:5px;text-transform:uppercase">
+      Malla Antigua (Plan 148-1)
+    </div>
+    ${renderGridPDF('148-1')}
+  `;
+
+  const mallaNuevaHtml = `
+    <div style="font-size:8px;font-weight:800;color:#1e3a8a;background:#f1f5f9;padding:2px 5px;border-left:3px solid #1e3a8a;margin-top:10px;margin-bottom:5px;text-transform:uppercase">
+      Malla Nueva (Plan 148-2)
+    </div>
+    ${renderGridPDF('148-2')}
+  `;
+
   const selG1 = Object.entries(sugSeleccion).filter(([, v]) => v === 'g1').map(([s]) => s);
-  const siglaToNombreMap = {};
-  fullPool.forEach(m => { siglaToNombreMap[m.sigla] = m.nombre; });
-
-  function tablaImpresion(titulo, lista, colorBg) {
-    let filas = lista.map((sigla, i) => {
-      const nombre = siglaToNombreMap[sigla] || sigla;
-      return `<tr><td style="text-align:center;width:20px">${i + 1}</td><td style="font-weight:700;width:60px">${sigla}</td><td>${nombre}</td></tr>`;
-    }).join('');
-    if (!lista.length) filas = '<tr><td colspan="3" style="text-align:center;color:#9ca3af;font-style:italic">Sin materias asignadas</td></tr>';
-    return `<div style="flex:1">
-      <div style="background:${colorBg};color:#fff;padding:3px 6px;border-radius:3px 3px 0 0;font-weight:700;font-size:8px">${titulo} (${lista.length}/7)</div>
-      <table style="width:100%;border-collapse:collapse;font-size:7px">
-        <thead><tr style="background:#f8fafc"><th style="padding:1px 3px;text-align:left">#</th><th style="padding:1px 3px;text-align:left">Sigla</th><th style="padding:1px 3px;text-align:left">Materia</th></tr></thead>
-        <tbody>${filas}</tbody>
-      </table>
-    </div>`;
-  }
+  let g1Rows = selG1.map((sigla, i) => {
+    let nombre = "";
+    CONVALIDACIONES.forEach(c => {
+      if (c[0] === sigla) nombre = c[1];
+      else if (c[3] === sigla) nombre = c[4];
+    });
+    return `<tr>
+      <td style="padding:2px;border:1px solid #e2e8f0;font-size:7px;width:20px;text-align:center">${i + 1}</td>
+      <td style="padding:2px;border:1px solid #e2e8f0;font-size:7px;width:50px"><b>${sigla}</b></td>
+      <td style="padding:2px;border:1px solid #e2e8f0;font-size:7px">${nombre}</td>
+    </tr>`;
+  }).join('');
+  if (!g1Rows) g1Rows = '<tr><td colspan="3" style="text-align:center;padding:5px;font-style:italic;font-size:7px;border:1px solid #e2e8f0">Sin materias seleccionadas</td></tr>';
 
   const fechaHoy = new Date().toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  const tituloPagina = plan === "148-2" ? "AVANCE EN MALLA NUEVA 148-2" : "AVANCE EN MALLA ANTIGUA (148-1)";
 
   const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Hoja de Ruta - ${est.Nombre}</title>
-<style>
-  @page { size: landscape; margin: 5mm; }
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 8px; color: #1e293b; padding: 2mm; }
-  .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #1e3a8a; padding-bottom: 3px; margin-bottom: 5px; }
-  .header h1 { font-size: 14px; font-weight: 800; color: #1e3a8a; text-transform: uppercase; }
-  .header .info { text-align: right; line-height: 1.2; }
-  .stats { display: flex; gap: 10px; margin-bottom: 5px; }
-  .stat { background: #f1f5f9; padding: 2px 6px; border-radius: 3px; border: 1px solid #e2e8f0; }
-  .stat b { color: #1e3a8a; }
-  .legend { display: flex; gap: 8px; margin-bottom: 5px; font-size: 6.5px; color: #64748b; }
-  .leg-item { display: flex; align-items: center; gap: 3px; }
-  .leg-dot { width: 7px; height: 7px; border-radius: 1px; border: 1px solid #cbd5e1; }
-  .malla-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-  .section-title { font-size: 9px; font-weight: 800; color: #1e3a8a; margin: 6px 0 3px; border-left: 3px solid #1e3a8a; padding-left: 6px; text-transform: uppercase; }
-  .sel-wrap { display: flex; gap: 10px; }
-  table td, table th { border: 1px solid #e2e8f0; padding: 1px 3px; }
-  .footer { margin-top: 8px; font-size: 6px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 3px; }
-</style>
-</head><body>
-  <div class="header">
-    <div>
-      <h1>📋 HOJA DE RUTA</h1>
-      <div style="font-size:7px;font-weight:700;color:#64748b">${tituloPagina}</div>
+  <html><head><meta charset="utf-8"><title>Hoja de Ruta - ${est.Nombre}</title>
+  <style>
+    @page { size: landscape; margin: 5mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 8px; color: #1e293b; padding: 2mm; }
+    .header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #1e3a8a; padding-bottom: 3px; margin-bottom: 5px; }
+    .header h1 { font-size: 14px; font-weight: 800; color: #1e3a8a; text-transform: uppercase; }
+    .stats { display: flex; gap: 10px; margin-bottom: 5px; }
+    .stat { background: #f1f5f9; padding: 2px 6px; border-radius: 3px; border: 1px solid #e2e8f0; }
+    .stat b { color: #1e3a8a; }
+  </style>
+  </head><body>
+    <div class="header">
+      <div><h1>📋 HOJA DE RUTA</h1></div>
+      <div style="text-align:right">
+        <div style="font-size:9px;font-weight:800;color:#1e3a8a">${est.Nombre}</div>
+        <div style="font-size:7px;font-weight:600">Registro: ${est.Registro} — Fecha: ${fechaHoy}</div>
+      </div>
     </div>
-    <div class="info">
-      <div style="font-size:9px;font-weight:800;color:#1e3a8a">${est.Nombre}</div>
-      <div style="font-size:7px;font-weight:600">Registro: ${est.Registro} — Fecha: ${fechaHoy}</div>
+
+    <div class="stats">
+      <span class="stat">Semestre Actual: <b>${semActualStr}</b></span>
+      <span class="stat">Aprobadas: <b>${totalAprobadas}</b></span>
+      <span class="stat">Situación: <b>${displayPlan}</b></span>
     </div>
-  </div>
 
-  <div class="stats">
-    <span class="stat">Semestre Actual: <b>${semActualStr}</b></span>
-    <span class="stat">Aprobadas: <b>${totalAprobadas}</b></span>
-    <span class="stat">Situación: <b>${displayPlan}</b></span>
-  </div>
+    ${mallaAntiguaHtml}
+    ${mallaNuevaHtml}
 
-  <div class="legend">
-    <div class="leg-item"><span class="leg-dot" style="background:#dcfce7;border-color:#16a34a"></span> Aprobada</div>
-    <div class="leg-item"><span class="leg-dot" style="background:#fee2e2;border-color:#dc2626"></span> Reprobada</div>
-    <div class="leg-item"><span class="leg-dot" style="background:#fef9c3;border-color:#f59e0b"></span> Pendiente</div>
-    <div class="leg-item"><span class="leg-dot" style="background:#dbeafe;border-color:#1e3a8a"></span> G1/2026</div>
-  </div>
-
-  <div class="section-title">CONTROL DE AVANCE ACADÉMICO</div>
-  <table class="malla-table"><tr>${mallaCols}</tr></table>
-
-  <div class="section-title">MATERIAS SUGERIDAS PARA GESTIÓN 1/2026</div>
-  <div class="sel-wrap">
-    ${tablaImpresion('Gestión 1/2026', selG1, '#1e3a8a')}
-  </div>
-
-  <div class="footer">Este documento es una guía académica sugerida generada el ${fechaHoy}.</div>
-</body></html>`;
+    <div style="margin-top:10px; background:#f1f5f9; padding:8px; border-radius:5px; border:1px solid #1e3a8a">
+      <div style="font-size:9px; font-weight:800; color:#1e3a8a; margin-bottom:5px">Sugerencia de Inscripción - Gestión 1/2026</div>
+      <table style="width:100%; border-collapse:collapse; background:#fff">
+        <thead style="background:#1e3a8a; color:#fff">
+          <tr><th style="padding:2px;font-size:7px;text-align:center">#</th><th style="padding:2px;font-size:7px;text-align:left">Sigla</th><th style="padding:2px;font-size:7px;text-align:left">Materia</th></tr>
+        </thead>
+        <tbody>${g1Rows}</tbody>
+      </table>
+    </div>
+    <div style="margin-top:5px; text-align:center; font-size:6px; color:#94a3b8; border-top:1px solid #eee; padding-top:2px">
+      Documento con fines informativos - Hoja de Ruta Académica - Generado el ${fechaHoy}
+    </div>
+  </body></html>`;
 
   const win = window.open('', '_blank');
   win.document.write(html);
@@ -1419,9 +1362,12 @@ function actualizarModalMalla() {
   const cntG1 = Object.values(sugSeleccion).filter(v => v === 'g1').length;
   const siglasPool = new Set(fullPool.map(m => m.sigla));
 
-  // Map sigla → nombre para tablas inferiores
+  // Map sigla → nombre para tablas inferiores (todas las posibles de ambas mallas)
   const siglaToNombre = {};
-  fullPool.forEach(m => { siglaToNombre[m.sigla] = m.nombre; });
+  CONVALIDACIONES.forEach(c => {
+    if (c[0]) siglaToNombre[c[0]] = c[1]; // Antigua
+    if (c[3]) siglaToNombre[c[3]] = c[4]; // Nueva
+  });
 
   // ── Helper: card de materia en el modal ──────────────────────
   function cardMatModal(sigla, nombre, notaVal, esPendientePool, type = 'antigua', origs = []) {
@@ -1430,16 +1376,14 @@ function actualizarModalMalla() {
     const reprobada = n !== null && n < 51;
     const sel = sugSeleccion[sigla] || null;
 
-    let cls = 'mm-card';
+    let cls = 'mm-card mm-clickable';
     if (aprobada) cls += ' mm-aprobada';
     else if (reprobada) cls += ' mm-reprobada';
     else if (sel === 'g1') cls += ' mm-sel-g1-card';
     else if (sel === 'g2') cls += ' mm-sel-g2-card';
-    else if (esPendientePool) cls += ' mm-pendiente mm-clickable';
-    else cls += ' mm-otra';
+    else cls += ' mm-pendiente';
 
-    const clickAttr = esPendientePool && !aprobada
-      ? `onclick="sugCiclar('${sigla}')" style="cursor:pointer"` : '';
+    const clickAttr = `onclick="sugCiclar('${sigla}')" style="cursor:pointer"`;
 
     let selBadge = '';
     if (sel === 'g1') selBadge = '<span class="mm-sel mm-sel-g1">G1</span>';
@@ -1484,132 +1428,100 @@ function actualizarModalMalla() {
     </div>`;
   }
 
-  // ── Construir grid de semestres según plan ──────────────────
-  let semCols = '';
+  // ── Helper: Renderizar una malla completa ───────────────────
+  function renderFullGrid(mallaType) {
+    let html = '';
+    const isNueva = mallaType === '148-2';
 
-  if (plan === '148-2') {
-    // ── PLAN 148-2: Malla Nueva (sem 1-6) + Antigua (sem 7+) ──
-    const SEMS_NUEVA_MODAL = [
-      { key: "PRIMER SEMESTRE", label: "1° N", color: "#1d4ed8" },
-      { key: "SEGUNDO SEMESTRE", label: "2° N", color: "#1e40af" },
-      { key: "TERCER SEMESTRE", label: "3° N", color: "#1a56db" },
-      { key: "CUARTO SEMESTRE", label: "4° N", color: "#6d28d9" },
-      { key: "QUINTO SEMESTRE", label: "5° N", color: "#7c3aed" },
-      { key: "SEXTO SEMESTRE", label: "6° N", color: "#a21caf" },
-    ];
-    const SEMS_ANT_7PLUS = [
-      { key: "SÉPTIMO SEMESTRE", label: "7°", color: "#be185d" },
-      { key: "OCTAVO SEMESTRE", label: "8°", color: "#b91c1c" },
-      { key: "NOVENO SEMESTRE", label: "9°", color: "#92400e" },
-      { key: "DÉCIMO SEMESTRE", label: "10°", color: "#065f46" },
-    ];
+    if (isNueva) {
+      // Malla Nueva (Deduplicar siglaNueva)
+      const byNueva = {};
+      CONVALIDACIONES.forEach(conv => {
+        const [siglaAnt, , , siglaNueva, nombreNueva, semNuevo, tipo] = conv;
+        if (!siglaNueva) return;
 
-    // Agrupar malla nueva por semestre (siglaNueva, deduplicadas)
-    const byNueva = {};
-    CONVALIDACIONES.forEach(conv => {
-      const [siglaAnt, , , siglaNueva, nombreNueva, semNuevo, tipo] = conv;
-      if (!siglaNueva || tipo === 'ELIMINADA') return;
-      const k = semNuevo || 'ELECTIVA';
-      if (!byNueva[k]) byNueva[k] = {};
-      if (!byNueva[k][siglaNueva]) {
-        byNueva[k][siglaNueva] = { siglaNueva, nombreNueva, tipo, origs: [] };
-      }
-      byNueva[k][siglaNueva].origs.push({ siglaAnt, nota: est[siglaAnt] });
-    });
+        const isAbordaje = (nombreNueva && nombreNueva.toUpperCase().includes("ABORDAJE")) ||
+          (siglaNueva && siglaNueva.toUpperCase().includes("ABORDAJE"));
 
-    // Columnas malla nueva (1-6)
-    SEMS_NUEVA_MODAL.forEach(sec => {
-      const items = Object.values(byNueva[sec.key] || {});
-      const cards = items.map(it => {
-        // Estado: aprobada si alguna orig >= 51
-        const bestNota = it.origs.reduce((best, o) => {
-          const n = o.nota != null && !isNaN(Number(o.nota)) ? Number(o.nota) : null;
-          return n !== null && (best === null || n > best) ? n : best;
-        }, null);
-        const aprobada = bestNota !== null && bestNota >= 51;
-        const notaForCard = aprobada ? bestNota : (bestNota !== null && bestNota < 51 ? bestNota : null);
-        const esPend = siglasPool.has(it.siglaNueva);
-        return cardMatModal(it.siglaNueva, it.nombreNueva, notaForCard, esPend, 'nueva', it.origs);
-      }).join('');
+        if (tipo === 'ELIMINADA' && !isAbordaje) return;
 
-      semCols += `
-        <div class="mm-sem-col">
-          <div class="mm-sem-header" style="background:${sec.color}18;border-color:${sec.color}50;color:${sec.color}">
-            <span class="mm-sem-num">${sec.label}</span>
-            <span class="mm-sem-count">${items.length}</span>
-          </div>
-          <div class="mm-sem-body">${cards}</div>
-        </div>`;
-    });
+        const k = semNuevo || 'ELECTIVA';
+        if (!byNueva[k]) byNueva[k] = {};
+        if (!byNueva[k][siglaNueva]) {
+          byNueva[k][siglaNueva] = { sigla: siglaNueva, nombre: nombreNueva, tipo, origs: [] };
+        }
+        byNueva[k][siglaNueva].origs.push({ siglaAnt, nota: est[siglaAnt] });
+      });
 
-    // Separador visual
-    semCols += `<div class="mm-separator"><span>148-1</span></div>`;
+      SECS_SEMESTRES.forEach(sec => {
+        const items = Object.values(byNueva[sec.key] || {});
+        const cards = items.map(it => {
+          const bestNota = it.origs.reduce((best, o) => {
+            const n = o.nota != null && !isNaN(Number(o.nota)) ? Number(o.nota) : null;
+            return (n !== null && (best === null || n > best)) ? n : best;
+          }, null);
+          const esPend = siglasPool.has(it.sigla);
+          return cardMatModal(it.sigla, it.nombre, bestNota, esPend, 'nueva', it.origs);
+        }).join('');
 
-    // Columnas malla antigua (7+)
-    const byAnt = {};
-    CONVALIDACIONES.forEach(r => {
-      const sigla = r[0], nombre = r[1], sem = r[2], tipo = r[6], orden = r[7];
-      const semN = SEM_NUM[sem] || 0;
-      if (semN < 7) return;
-      if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla) && !nombre.startsWith("ABORDAJE")) {
-        const nota = est[sigla];
-        const n = nota != null && nota !== '' && !isNaN(Number(nota)) ? Number(nota) : null;
-        if (n === null || n < 51) return;
-      }
-      if (!byAnt[sem]) byAnt[sem] = [];
-      byAnt[sem].push({ sigla, nombre, tipo, orden });
-    });
-    Object.values(byAnt).forEach(arr => arr.sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999)));
+        html += `
+          <div class="mm-sem-col">
+            <div class="mm-sem-header" style="background:${sec.color}18;border-color:${sec.color}50;color:${sec.color}">
+              <span class="mm-sem-num">${sec.label}</span>
+              <span class="mm-sem-count">${items.length}</span>
+            </div>
+            <div class="mm-sem-body">${cards}</div>
+          </div>`;
+      });
 
-    SEMS_ANT_7PLUS.forEach(sec => {
-      const mats = byAnt[sec.key] || [];
-      const cards = mats.map(m => {
-        const nota = est[m.sigla];
-        const esPend = siglasPool.has(m.sigla);
-        return cardMatModal(m.sigla, m.nombre, nota, esPend);
-      }).join('');
-      semCols += `
-        <div class="mm-sem-col">
-          <div class="mm-sem-header" style="background:${sec.color}18;border-color:${sec.color}50;color:${sec.color}">
-            <span class="mm-sem-num">${sec.label}</span>
-            <span class="mm-sem-count">${mats.length}</span>
-          </div>
-          <div class="mm-sem-body">${cards}</div>
-        </div>`;
-    });
+    } else {
+      // Malla Antigua
+      const byAnt = {};
+      CONVALIDACIONES.forEach(r => {
+        const [sigla, nombre, sem, , , , tipo, orden] = r;
+        if (!sigla || sem === 'ELECTIVA' || sem === 'TALLER' || sem === 's/n') return;
 
-  } else {
-    // ── PLAN 148-1: Malla Antigua completa ────────────────────
-    const byKey = {};
-    CONVALIDACIONES.forEach(r => {
-      const sigla = r[0], nombre = r[1], sem = r[2], tipo = r[6], orden = r[7];
-      if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla) && !nombre.startsWith("ABORDAJE")) {
-        const nota = est[sigla];
-        const n = nota != null && nota !== '' && !isNaN(Number(nota)) ? Number(nota) : null;
-        if (n === null || n < 51) return;
-      }
-      if (!byKey[sem]) byKey[sem] = [];
-      byKey[sem].push({ sigla, nombre, tipo, orden });
-    });
-    Object.values(byKey).forEach(arr => arr.sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999)));
+        const isAbordaje = nombre && nombre.toUpperCase().includes("ABORDAJE");
+        if (tipo === 'ELIMINADA' && !isAbordaje) return;
 
-    SECS_SEMESTRES.forEach(sec => {
-      const mats = byKey[sec.key] || [];
-      const cards = mats.map(m => {
-        const nota = est[m.sigla];
-        const esPend = siglasPool.has(m.sigla);
-        return cardMatModal(m.sigla, m.nombre, nota, esPend);
-      }).join('');
-      semCols += `
-        <div class="mm-sem-col">
-          <div class="mm-sem-header" style="background:${sec.color}18;border-color:${sec.color}50;color:${sec.color}">
-            <span class="mm-sem-num">${sec.label}</span>
-            <span class="mm-sem-count">${mats.length}</span>
-          </div>
-          <div class="mm-sem-body">${cards}</div>
-        </div>`;
-    });
+        if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla) && !isAbordaje) {
+          const nota = est[sigla];
+          const n = nota != null && nota !== '' && !isNaN(Number(nota)) ? Number(nota) : null;
+          if (n === null || n < 51) return;
+        }
+        if (!byAnt[sem]) byAnt[sem] = [];
+        byAnt[sem].push({ sigla, nombre, tipo, orden });
+      });
+      Object.values(byAnt).forEach(arr => arr.sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999)));
+
+      SECS_SEMESTRES.forEach(sec => {
+        const mats = byAnt[sec.key] || [];
+        const cards = mats.map(m => {
+          const nota = est[m.sigla];
+          const esPend = siglasPool.has(m.sigla);
+          return cardMatModal(m.sigla, m.nombre, nota, esPend, 'antigua');
+        }).join('');
+        html += `
+          <div class="mm-sem-col">
+            <div class="mm-sem-header" style="background:${sec.color}18;border-color:${sec.color}50;color:${sec.color}">
+              <span class="mm-sem-num">${sec.label}</span>
+              <span class="mm-sem-count">${mats.length}</span>
+            </div>
+            <div class="mm-sem-body">${cards}</div>
+          </div>`;
+      });
+
+      // Se eliminó la sección de materias s/n ya que son espacios vacíos
+    }
+    return `<div class="mm-malla-grid">${html}</div>`;
   }
+
+  const semCols = `
+    <div class="mm-malla-section-title">Malla Antigua (148-1)</div>
+    ${renderFullGrid('148-1')}
+    <div class="mm-malla-section-title" style="margin-top:2rem">Malla Nueva (148-2)</div>
+    ${renderFullGrid('148-2')}
+  `;
 
   // ── SECCIÓN EXTRA: Electivas y Talleres ────────────────────
   const byExtra = {};
@@ -1700,9 +1612,7 @@ function actualizarModalMalla() {
         <span class="mm-leg-item"><i class="fa-solid fa-hand-pointer"></i> Clic para asignar</span>
       </div>
       <div class="mm-malla-scroll">
-        <div class="mm-malla-grid">
-          ${semCols}
-        </div>
+        ${semCols}
       </div>
       ${extraColsHtml}
       <div class="mm-bottom-panel">
