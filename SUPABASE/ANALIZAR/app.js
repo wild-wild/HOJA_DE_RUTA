@@ -1189,13 +1189,17 @@ window.imprimirHojaRuta = function () {
     const byAnt = {};
     CONVALIDACIONES.forEach(r => {
       const [sigla, nombre, sem, , , , tipo, orden] = r;
-      if (!sigla || tipo === 'ELIMINADA' || sem === 'ELECTIVA' || sem === 'TALLER' || sem === 's/n') return;
+      if (!sigla || sem === 'ELECTIVA' || sem === 'TALLER' || sem === 's/n') return;
 
-      const isAbordaje = nombre && nombre.startsWith("ABORDAJE");
+      const isAbordaje = (nombre && nombre.toUpperCase().includes("ABORDAJE")) ||
+        (sigla && sigla.toUpperCase().includes("ABORDAJE"));
+
+      if (tipo === 'ELIMINADA' && !isAbordaje) return;
 
       if (SEMS_FILTRO.has(sem) && !SIGLAS_SIEMPRE_9_10.has(sigla) && !isAbordaje) {
-        const n = Number(est[sigla]);
-        if (isNaN(n) || n < 51) return;
+        const nota = est[sigla];
+        const n = nota != null && nota !== '' && !isNaN(Number(nota)) ? Number(nota) : null;
+        if (n === null || n < 51) return;
       }
       if (!byAnt[sem]) byAnt[sem] = [];
       byAnt[sem].push({ sigla, nombre, tipo, orden });
@@ -1278,16 +1282,18 @@ window.imprimirHojaRuta = function () {
     ${renderGridPDF('148-2')}
   `;
 
-  const selG1 = Object.entries(sugSeleccion).filter(([, v]) => v === 'g1').map(([s]) => s);
-  let g1Rows = selG1.map((sigla, i) => {
-    let nombre = "";
-    CONVALIDACIONES.forEach(c => {
-      if (c[0] === sigla) nombre = c[1];
-      else if (c[3] === sigla) nombre = c[4];
-    });
+  // Determinar materias para la tabla de sugerencias (G1)
+  const { gestion1: autoG1, fullPool } = getSugerencias(est);
+  let useG1 = (fullPool || []).filter(m => sugSeleccion[m.sigla] === 'g1');
+  if (useG1.length === 0) {
+    useG1 = [...(autoG1 || [])];
+  }
+
+  let g1Rows = useG1.map((m, i) => {
+    const nombre = siglaToNombre[m.sigla] || m.nombre || m.sigla;
     return `<tr>
       <td style="padding:2px;border:1px solid #e2e8f0;font-size:7px;width:20px;text-align:center">${i + 1}</td>
-      <td style="padding:2px;border:1px solid #e2e8f0;font-size:7px;width:50px"><b>${sigla}</b></td>
+      <td style="padding:2px;border:1px solid #e2e8f0;font-size:7px;width:50px"><b>${m.sigla}</b></td>
       <td style="padding:2px;border:1px solid #e2e8f0;font-size:7px">${nombre}</td>
     </tr>`;
   }).join('');
